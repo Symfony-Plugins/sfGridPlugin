@@ -1,0 +1,12 @@
+This plugin contains a grid subframework that allows to read various data sources in a unified way. These data sources can be rendered in a 
+customizable grid with a custom formatter. The code of this plugin will eventually become bundled with symfony 1.3.
+
+Currently, arrays and Doctrine tables can be used as data sources. Propel, XML and CSV are planned for the final version Only a HTML formatter is 
+currently supported. A raw text formatter and an XML formatter are planned for the final version.
+
+THIS PLUGIN IS IN VERY EARLY ALPHA STAGES AND IS NOT RECOMMENDED FOR PRODUCTION USE.
+
+LICENSE
+-------
+
+see LICENSE file
