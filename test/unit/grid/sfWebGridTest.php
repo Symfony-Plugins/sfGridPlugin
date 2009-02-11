@@ -15,10 +15,7 @@ class sfWebGridTest extends sfWebGrid
 {
   public function configure()
   {
-    $this->setColumns(array(
-      'id'    => new sfGridColumn('Id'), 
-      'name'  => new sfGridColumn('Name'),
-    ));
+    $this->setColumns(array('id', 'name'));
     $this->getPager()->setMaxPerPage(2);
   }
 }

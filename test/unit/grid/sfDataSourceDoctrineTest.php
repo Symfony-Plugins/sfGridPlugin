@@ -22,7 +22,7 @@ function iterator_to_field_array($iterator, $field)
 
 // initialize Doctrine
 $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_doctrine_%s.data', md5(__FILE__)));
-$autoload->addDirectory(realpath($_test_dir.'/../lib/plugins/sfDoctrinePlugin/lib'));
+$autoload->addDirectory(realpath($_SERVER['SYMFONY'].'/plugins/sfDoctrinePlugin/lib'));
 $autoload->register();
 
 class ProjectConfiguration extends sfProjectConfiguration {}
