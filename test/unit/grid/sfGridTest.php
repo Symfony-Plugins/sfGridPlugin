@@ -9,8 +9,8 @@
  */
 
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
-require_once(dirname(__FILE__).'/mock/sfGridFormatterMock.class.php');
-require_once(dirname(__FILE__).'/mock/sfDataSourceMock.class.php');
+require_once(dirname(__FILE__).'/../mock/sfGridFormatterMock.class.php');
+require_once(dirname(__FILE__).'/../mock/sfDataSourceMock.class.php');
 
 class sfGridTest extends sfGrid
 {
