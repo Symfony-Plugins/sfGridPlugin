@@ -193,7 +193,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return count($this->grid);
   }
   
-  protected function makeUri($uri, array $params)
+  static public function makeUri($uri, array $params)
   {
     // split the uri
     $uri = explode('?', $uri);
