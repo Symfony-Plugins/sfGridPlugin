@@ -10,12 +10,18 @@
 
 class sfGridFormatterHtml implements sfGridFormatterInterface
 {
+  /**
+   * @var sfGrid
+   */
+  protected $grid = null;
+  
   protected
-    $grid     = null,
-    $row      = null,
-    $cursor   = 0,
-    $uri      = null,
-    $sortable = array();
+    $row        = null,
+    $cursor     = 0,
+    $uri        = null,
+    $sortable   = array(),
+    $sortClass  = array('asc' => 'sort_asc', 
+                        'desc' => 'sort_desc');
     
   static public function indent($code, $levels)
   {
@@ -35,6 +41,22 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     {
       $this->row = new sfGridFormatterHtmlRow($grid, 0);
     }
+  }
+  
+  /**
+   * Sets the css classes used for the actively sorted column 
+   *
+   * @param array $sortClass
+   * @throws LogicException Throws an exception if no asc or desc have been defined
+   */
+  public function setSortClasses(array $sortClass)
+  {
+    if (!isset($sortClass['asc']) || !isset($sortClass['desc']))
+    {
+     throw new LogicException('When setting the sortClasses please specify both asc and desc'); 
+    }
+    
+    $this->sortClass = $sortClass; 
   }
     
   public function render()
@@ -132,7 +154,10 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   public function renderColumnHead($column)
   {
     $widget = $this->grid->getWidget($column);
-    $html = ucfirst($column);
+
+    $html = $this->grid->getTitleForColumn($column);
+    
+    $class='';
     
     if (in_array($column, $this->grid->getSortable()))
     {
@@ -142,23 +167,23 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
 	      throw new LogicException('Please specify a URI with sfGrid::setUri() before rendering the pager');
 	    }
 	    
-	    // the new order is the inverse order of the current order in the grid,
-	    // if the current sort column is this column
-	    $order = $this->grid->getSortColumn() == $column 
-	       ? ($this->grid->getSortOrder() == sfGrid::ASC ? 'desc' : 'asc')
-	       : 'asc';
-	    
+	    if ($this->grid->getSortColumn() == $column)
+	    {
+        $class = ' class="'.$this->sortClass[$this->grid->getSortOrder()].'"';
+      }
+      
+      $nextOrder = $this->grid->getSortColumn() == $column 
+         ? ($this->grid->getSortOrder() == sfGrid::ASC ? 'desc' : 'asc')
+         : 'asc';      
+
 	    // build the HTML with a class attribute sort_asc or sort_desc, if the
 	    // column is currently being sorted
-	    $html = sprintf("<a %shref=\"%s\">%s</a>",
-	       $this->grid->getSortColumn() == $column 
-	           ? 'class="sort_' . ($order == 'asc' ? 'desc' : 'asc') . '" '
-	           : '',
-	       $this->makeUri($uri, array('sort' => $column, 'sort_order' => $order)), 
+	    $html = sprintf("<a href=\"%s\">%s</a>",
+	       $this->makeUri($uri, array('sort' => $column, 'sort_order' => $nextOrder)), 
 	       $html);
     }
     
-    return "<th>" . $html . "</th>";
+    return "<th".$class.">" . $html . "</th>";
   }
   
   public function current()

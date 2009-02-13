@@ -48,14 +48,15 @@ class sfGrid implements Countable
   const ALL  = 0;
 
   private
-    $columns    = array(),
-    $sortable   = array(),
-    $widgets    = array(),
-    $formatter  = null,
-    $pager      = null,
-    $sortColumn = null,
-    $sortOrder  = null,
-    $uri        = null;
+    $columns      = array(),
+    $columnTitles = array(),
+    $sortable     = array(),
+    $widgets      = array(),
+    $formatter    = null,
+    $pager        = null,
+    $sortColumn   = null,
+    $sortOrder    = null,
+    $uri          = null;
 
   /**
    * Constructor.
@@ -140,6 +141,78 @@ class sfGrid implements Countable
   public function hasColumn($column)
   {
     return in_array($column, $this->columns);
+  }
+  
+  /**
+   * Sets a list of titles that should be used for the given columns. The 
+   * titles should be given as associative array with the column 
+   * names as keys.
+   * 
+   * <code>
+   * $grid->setColumnTitles(array(
+   *   'id'         => 'Key',
+   *   'created_at' => 'Created At',
+   * ));
+   * </code>
+   * 
+   * Columns for which you do not specify a widget will not be modified. Per
+   * default all columns are rendered with sfWidgetText. 
+   * 
+   * @param array $columnTitles An associative array of column names and titles
+   * @throws LogicException     Throws an exception if any of the given column
+   *                            names has not been configured with setColumns()
+   */
+  public function setColumnTitles(array $columnTitles)
+  {
+    foreach ($columnTitles as $column => $title)
+    {
+      $this->setColumnTitle($column, $title);
+    }
+  }
+  
+  /**
+   * Sets the title used to render above the given column.
+   * 
+   * Per default all columns have a uppercase-first title of the column-name
+   * 
+   * @param  string $column   The name of the column
+   * @param  string $title    The title used to render above this column
+   * @throws LogicException   Throws an exception if the given column
+   *                          name has not been configured with setColumns()
+   */
+  public function setColumnTitle($column, $title)
+  {
+    if (!$this->hasColumn($column))
+    {
+      throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+    }
+    
+    $this->columnTitles[$column] = $title;
+  }
+  
+  /**
+   * Returns the title for a column
+   *
+   * @param string $column  the column name
+   * @return string         the title for this column
+   */
+  public function getTitleForColumn($column)
+  {
+    if (!$this->hasColumn($column))
+    {
+      throw new LogicException(sprintf('The column "%s" is not defined for this grid', $column));
+    }
+    
+    if (isset($this->columnTitles[$column]))
+    {
+      $title = $this->columnTitles[$column];
+    }
+    else
+    {
+      $title = $column;
+    }
+    
+    return $title;
   }
 
   /**
