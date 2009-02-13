@@ -143,7 +143,22 @@ class sfDataSourcePropel extends sfDataSource
   {
     $stmt = BasePeer::doSelect($this->criteria, $con = null);
     
-    $this->data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $results = $stmt->fetchAll(PDO::FETCH_NUM);
+    
+    $this->data = array();
+    
+    $selectColumns = $this->criteria->getSelectColumns();
+    
+    foreach ($results as $result)
+    {
+      $row = array();
+      foreach ($result as $key => $field)
+      {
+        // translate columnnames
+        $row[$selectColumns[$key]] = $field;
+      }
+      $this->data[] = $row;      
+    }
   }
 
   /**
@@ -240,7 +255,6 @@ class sfDataSourcePropel extends sfDataSource
    */
   public function hasColumn($column)
   {
-    // TODO: this has to be improved, the column-name now has to be preceded with the table-name 
     return array_search($column, $this->criteria->getSelectColumns());
   }
   

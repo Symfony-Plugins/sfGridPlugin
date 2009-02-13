@@ -28,7 +28,7 @@ class sfWidgetLink extends sfWidget
   protected $mapping;
   
   /**
-   * Enter description here...
+   * The constructor for the sfWidgetLink class, allowing to render links in a column
    *
    * @param sfGrid $grid        an instance of the sfGrid, containing a datasource
    * @param string $action      the name of the action the link is directing to
@@ -83,6 +83,5 @@ class sfWidgetLink extends sfWidget
     sfLoader::loadHelpers(array('Url', 'Tag'));
     
     return link_to($value, $this->getUri());
-    return $this->renderContentTag('a', $value, array_merge(array('href' => $this->getUri()), $attributes));
   }
 }

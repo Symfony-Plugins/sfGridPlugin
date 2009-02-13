@@ -331,20 +331,23 @@ class sfGrid implements Countable
   {
     if ($columns === sfGrid::ALL)
     {
-      $columns = $this->getColumns();
+      $this->sortable = sfGrid::ALL;
     }
-    // the developer can also pass a single column name
-    $columns = (array)$columns;
-
-    foreach ($columns as $column)
+    else
     {
-      if (!$this->hasColumn($column))
+      // the developer can also pass a single column name
+      $columns = (array)$columns;
+  
+      foreach ($columns as $column)
       {
-        throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+        if (!$this->hasColumn($column))
+        {
+          throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+        }
       }
+    
+      $this->sortable = $columns;
     }
-
-    $this->sortable = $columns;
   }
 
   /**
@@ -354,7 +357,14 @@ class sfGrid implements Countable
    */
   public function getSortable()
   {
-    return $this->sortable;
+    if ($this->sortable === sfGrid::ALL)
+    {
+      return $this->getColumns();
+    }
+    else 
+    {      
+      return $this->sortable;
+    }
   }
   
   /**
