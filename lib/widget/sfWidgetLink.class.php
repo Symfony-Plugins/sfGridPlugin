@@ -18,29 +18,53 @@ class sfWidgetLink extends sfWidget
    * @var string
    */
   protected $key_column; 
+  /**
+   * @var string
+   */
+  protected $action; 
+  /**
+   * @var string
+   */
+  protected $mapping;
   
   /**
    * Enter description here...
    *
-   * @param sfGrid $grid
-   * @param string $key_column
+   * @param sfGrid $grid        an instance of the sfGrid, containing a datasource
+   * @param string $action      the name of the action the link is directing to
+   * @param string $key_column  the column name from the datasource that should be used as key
+   * @param array $mapping      a mapping to translate the column-name to a parameter in the url
    */
-  public function __construct($grid, $key_column = null)
+  public function __construct($grid, $action, $key_column = null, $mapping = array())
   {
-    $this->grid= $grid;
+    $this->grid       = $grid;
+    $this->action     = $action; 
     $this->key_column = $key_column;
+    $this->mapping    = $mapping;
   }
   
+  /**
+   * Returns the internal uri for the current widget 
+   *
+   * @return string
+   */
   public function getUri()
   {
-    $uri = $this->grid->getUri();
+    $uri = sfContext::getInstance()->getModuleName().'/'.$this->action.'?';
     
     if ($this->key_column)
     {
       $source = $this->grid->getDataSource();
-      $uri = sfGridFormatterHtml::makeUri($uri, array($this->key_column => $source[$this->key_column]));
+      $key = $this->key_column;
+      
+      if (isset($this->mapping[$key]))
+      {
+        $key = $this->mapping[$key];
+      }
+      
+      $uri .= $key.'='.$source[$this->key_column];
     }
-    
+
     return $uri;
   }
   
@@ -56,6 +80,9 @@ class sfWidgetLink extends sfWidget
    */
   public function render($name, $value = null, $attributes = array(), $errors = array())
   {
+    sfLoader::loadHelpers(array('Url', 'Tag'));
+    
+    return link_to($value, $this->getUri());
     return $this->renderContentTag('a', $value, array_merge(array('href' => $this->getUri()), $attributes));
   }
 }
