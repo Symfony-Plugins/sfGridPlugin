@@ -80,7 +80,7 @@ class sfWidgetLink extends sfWidget
    */
   public function render($name, $value = null, $attributes = array(), $errors = array())
   {
-    sfLoader::loadHelpers(array('Url', 'Tag'));
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url', 'Tag'));
     
     return link_to($value, $this->getUri());
   }

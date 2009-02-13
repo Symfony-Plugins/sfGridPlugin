@@ -10,6 +10,11 @@
 
 class sfGridFormatterHtml implements sfGridFormatterInterface
 {
+  const FIRST = "|&laquo;";
+  const PREV  = "&laquo;";
+  const NEXT  = "&raquo;";
+  const LAST  = "&raquo;|";
+  
   /**
    * @var sfGrid
    */
@@ -85,15 +90,15 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     }
     
     $pager = $this->grid->getPager();
-    $html = "<div>\n";
+    $html = "<div class=\"paging\">\n";
   
     if ($pager->hasFirstPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getFirstPage())) . "\">|&laquo;</a>\n";
+      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getFirstPage())) . "\">".self::FIRST."</a>\n";
     }
     if ($pager->hasPreviousPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getPreviousPage())) . "\">&laquo;</a>\n";
+      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getPreviousPage())) . "\">".self::PREV."</a>\n";
     }
     foreach ($pager as $page)
     {
@@ -108,11 +113,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     }
     if ($pager->hasNextPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getNextPage())) . "\">&raquo;</a>\n";
+      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getNextPage())) . "\">".self::PREV."</a>\n";
     }
     if ($pager->hasLastPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getLastPage())) . "\">&raquo;|</a>\n";
+      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getLastPage())) . "\">".self::LAST."</a>\n";
     }
     
     return $html . "</div>\n";
