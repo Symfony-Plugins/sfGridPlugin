@@ -188,6 +188,17 @@ class sfDataSourcePager implements Iterator
   {
     return $this->getPageCount() > 1;
   }
+  /*
+   * same as hasToPaginate, but Symfony sfPager has defined haveToPaginate()
+   * TODO: maybe remove hasToPaginate...
+   * 
+    @return boolean Whether pagination is required
+   */
+  public function haveToPaginate()
+  {
+    return $this->hasToPaginate();
+  }
+    
   
   /**
    * Sets the current page of the pager. The offset and limit values of the

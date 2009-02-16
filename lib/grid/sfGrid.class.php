@@ -371,10 +371,10 @@ class sfGrid implements Countable
    */
   public function setUri($uri)
   {
-    if (!preg_match('/^http:\/\//', $uri))
-    {
-      throw new UnexpectedValueException(sprintf('The string "%s" is not a valid URI, an URL should start with http://', $uri));
-    }
+//    if (!preg_match('/^http:\/\//', $uri))
+//    {
+//      throw new UnexpectedValueException(sprintf('The string "%s" is not a valid URI, an URL should start with http://', $uri));
+//    }
     $this->uri = $uri;
   }
 

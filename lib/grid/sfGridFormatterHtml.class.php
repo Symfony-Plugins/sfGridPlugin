@@ -94,11 +94,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   
     if ($pager->hasFirstPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getFirstPage())) . "\">".self::FIRST."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getFirstPage()), '', '&')) . "\">".self::FIRST."</a>\n";
     }
     if ($pager->hasPreviousPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getPreviousPage())) . "\">".self::PREV."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getPreviousPage()), '', '&')) . "\">".self::PREV."</a>\n";
     }
     foreach ($pager as $page)
     {
@@ -108,16 +108,16 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       }
       else
       {
-        $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $page)) . "\">" . $page . "</a>\n";
+        $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $page), '', '&')) . "\">" . $page . "</a>\n";
       }
     }
     if ($pager->hasNextPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getNextPage())) . "\">".self::PREV."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getNextPage()), '', '&')) . "\">".self::PREV."</a>\n";
     }
     if ($pager->hasLastPage())
     {
-      $html .= "  <a href=\"" . $this->makeUri($uri, array('page' => $pager->getLastPage())) . "\">".self::LAST."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getLastPage()), '', '&')) . "\">".self::LAST."</a>\n";
     }
     
     return $html . "</div>\n";
@@ -158,7 +158,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   
   public function renderColumnHead($column)
   {
-    $widget = $this->grid->getWidget($column);
+//    $widget = $this->grid->getWidget($column); //this is not used, if it gets used, it should be a columnHEADrenderWidget
 
     $html = $this->grid->getTitleForColumn($column);
     
@@ -184,7 +184,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
 	    // build the HTML with a class attribute sort_asc or sort_desc, if the
 	    // column is currently being sorted
 	    $html = sprintf("<a href=\"%s\">%s</a>",
-	       $this->makeUri($uri, array('sort' => $column, 'sort_order' => $nextOrder)), 
+	       url_for($uri. '?' . http_build_query(array('sort' => $column, 'type' => $nextOrder), '', '&')), 
 	       $html);
     }
     
@@ -223,22 +223,24 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return count($this->grid);
   }
   
-  static public function makeUri($uri, array $params)
-  {
-    // split the uri
-    $uri = explode('?', $uri);
-    
-    // extract the query string
-    $values = array();
-    if (count($uri) > 1)
-    {
-      $query = explode('#', $uri[1]);
-      parse_str($query[0], $values);
-    }
-    $params = array_merge($values, $params);
-    
-    // build the new uri
-    return $uri[0] . '?' . http_build_query($params, '', '&');
-  }
+//  TODO: this can be removed?! using the url_for method from symfony...
+//  static public function makeUri($uri, array $params)
+//  {
+//    // split the uri
+//    $uri = explode('?', $uri);
+//    
+//    // extract the query string
+//    $values = array();
+//    if (count($uri) > 1)
+//    {
+//      $query = explode('#', $uri[1]);
+//      parse_str($query[0], $values);
+//    }
+//    $params = array_merge($values, $params);
+//    
+//    // build the new uri
+////    return $uri[0] . '?' . http_build_query($params, '', '&');
+//    return url_for($module_action . '?' . http_build_query($params, '', '&'));
+//  }
 }
 

@@ -58,6 +58,11 @@ class sfDataSourcePropel extends sfDataSource
    * @var Criteria criteria
    */
   protected $criteria = null;
+  /*
+   * @var Criteria countCriteria
+   */
+  protected $countCriteria = null;
+  
   /**
    * @var array    data
    */
@@ -78,10 +83,15 @@ class sfDataSourcePropel extends sfDataSource
    * $criteria = new Criteria();
    * UserPeer::addSelectColumns($criteria);
    * 
-   * $source = new sfDataSourcePropel($criteria);
+   * $countCriteria = new Criteria();
+   * $countCriteria->setPrimaryTableName(UserPeer::TABLE_NAME);
+   * 
+   * $source = new sfDataSourcePropel($criteria, $countCriteria);
    * </code>
    * 
    * @param  mixed $source             The data source 
+   * @param  Criteria $countCriteria   The count Criteria, required when providing
+   *                                   a Criteria object as source.  
    * @throws UnexpectedValueException  Throws an exception if the source is a
    *                                   string, but not an existing class name
    * @throws UnexpectedValueException  Throws an exception if the source is a
@@ -92,7 +102,7 @@ class sfDataSourcePropel extends sfDataSource
    *                                   instance of Doctrine_Query or 
    *                                   Doctrine_Collection.
    */
-  public function __construct($source)
+  public function __construct($source, $countCriteria = null)
   {
     // the source can be passed as model class name...
     if (is_string($source))
@@ -112,13 +122,23 @@ class sfDataSourcePropel extends sfDataSource
       $tmp = new $source();
       $peer = $tmp->getPeer();
       
-      $this->criteria = new Criteria(); 
-      $peer->addSelectColumns($this->criteria);
+      $this->countCriteria = new Criteria();
+      
+      $this->selectCriteria = clone $this->countCriteria;
+      
+      
+      $peer->addSelectColumns($this->selectCriteria);
     }
     // ...the source can also be passed as Criteria ...
     elseif ($source instanceof Criteria)
     {
-      $this->criteria = clone $source;
+      if (!$countCriteria instanceof Criteria)
+      {
+        throw new UnexpectedValueException(sprintf('The countCriteria argument is required when providing a Criteria object as source. The countCriteria is not a Criteria based class'));
+      }      
+      
+      $this->selectCriteria = clone $source;
+      $this->countCriteria = clone $countCriteria;
     }
     else
     {
@@ -141,13 +161,13 @@ class sfDataSourcePropel extends sfDataSource
    */
   private function loadData()
   {
-    $stmt = BasePeer::doSelect($this->criteria, $con = null);
+    $stmt = BasePeer::doSelect($this->selectCriteria, $con = null);
     
     $results = $stmt->fetchAll(PDO::FETCH_NUM);
     
     $this->data = array();
     
-    $selectColumns = $this->criteria->getSelectColumns();
+    $selectColumns = $this->selectCriteria->getSelectColumns();
     
     foreach ($results as $result)
     {
@@ -229,11 +249,16 @@ class sfDataSourcePropel extends sfDataSource
    */
   public function countAll()
   {
-    $criteria = clone $this->criteria;
+    $criteria = clone $this->countCriteria;
     
     $criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
     $criteria->setLimit(-1);          // LIMIT affects the count negative
     $criteria->setOffset(0);          // OFFSET affects the count negative
+    
+    if (!$criteria->hasSelectClause()) {
+      throw new Exception('Please provide some select Criteria in the countCriteria (this can be a subset)');
+    }
+    
     // BasePeer returns a PDOStatement
     $stmt = BasePeer::doCount($criteria, $con = null);
 
@@ -245,9 +270,8 @@ class sfDataSourcePropel extends sfDataSource
     {
       $count = 0; // no rows returned; we infer that means 0 matches.
     }
-    $stmt->closeCursor();    
-    
-    return $count;
+    $stmt->closeCursor();
+    return $count;    
   }
   
   /**
@@ -255,7 +279,7 @@ class sfDataSourcePropel extends sfDataSource
    */
   public function hasColumn($column)
   {
-    return array_search($column, $this->criteria->getSelectColumns());
+    return array_search($column, $this->selectCriteria->getSelectColumns());
   }
   
   /**
@@ -267,7 +291,7 @@ class sfDataSourcePropel extends sfDataSource
   {
     parent::setOffset($offset);
     
-    $this->criteria->setOffset($offset);
+    $this->selectCriteria->setOffset($offset);
     $this->refresh();
   }
   
@@ -280,7 +304,7 @@ class sfDataSourcePropel extends sfDataSource
   {
     parent::setLimit($limit);
     
-    $this->criteria->setLimit($limit);
+    $this->selectCriteria->setLimit($limit);
     $this->refresh();
   }
   
@@ -301,15 +325,15 @@ class sfDataSourcePropel extends sfDataSource
    */
   protected function doSort($column, $order)
   {
-    $this->criteria->clearOrderByColumns();
+    $this->selectCriteria->clearOrderByColumns();
     
     switch ($order)
     {
       case sfDataSourceInterface::ASC:
-        $this->criteria->addAscendingOrderByColumn($column);
+        $this->selectCriteria->addAscendingOrderByColumn($column);
         break;
       case sfDataSourceInterface::DESC:
-        $this->criteria->addDescendingOrderByColumn($column);
+        $this->selectCriteria->addDescendingOrderByColumn($column);
         break;
       default:
         throw new Exception('sfDataSourcePropel::doSort() only accepts "'.sfDataSourceInterface::ASC.'" or "'.sfDataSourceInterface::DESC.'" as argument');
