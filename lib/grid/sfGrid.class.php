@@ -209,7 +209,7 @@ class sfGrid implements Countable
     }
     else
     {
-      $title = $column;
+      $title = ucFirst($column);
     }
     
     return $title;
@@ -375,7 +375,17 @@ class sfGrid implements Countable
 //    {
 //      throw new UnexpectedValueException(sprintf('The string "%s" is not a valid URI, an URL should start with http://', $uri));
 //    }
-    $this->uri = $uri;
+
+    if (strpos($uri, '?') === false )
+    {
+      $this->uri = $uri;
+    }
+    else 
+    {
+      $parts = explode('?', $uri);
+      $this->uri = $parts[0];
+    }
+    
   }
 
   /**

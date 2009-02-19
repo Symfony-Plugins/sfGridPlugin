@@ -36,7 +36,7 @@ class sfWidgetMock2 extends sfWidget
   public function render($name, $value = null, $attributes = array(), $errors = array()) {}
 }
 
-$t = new lime_test(52, new lime_output_color());
+$t = new lime_test(51, new lime_output_color());
 
 // ->__construct()
 $t->diag('->__construct()');
@@ -206,16 +206,17 @@ $g = new sfGrid(new sfDataSourceMock());
 $g->setUri('http://mydomain.com');
 $t->is($g->getUri(), 'http://mydomain.com', '->setUri() sets the URI used by formatters');
 $g->setUri('http://mydomain.com?param=value');
-$t->is($g->getUri(), 'http://mydomain.com?param=value', '->setUri() sets the URI used by formatters');
-try
-{
-  $g->setUri('invaliduri');
-  $t->fail('->setUri() throws an "UnexpectedValueException" if not given a valid URI');
-}
-catch (UnexpectedValueException $e)
-{
-  $t->pass('->setUri() throws an "UnexpectedValueException" if not given a valid URI');
-}
+// Bernhard, just like mentioned in sfGridFormatterHtmlTest I changed this, so no more parameters (these can be stored in the user session)... 
+$t->is($g->getUri(), 'http://mydomain.com', '->setUri() sets the URI used by formatters');
+//try
+//{
+//  $g->setUri('invaliduri');
+//  $t->fail('->setUri() throws an "UnexpectedValueException" if not given a valid URI, got: '.$g->getUri());
+//}
+//catch (UnexpectedValueException $e)
+//{
+//  $t->pass('->setUri() throws an "UnexpectedValueException" if not given a valid URI');
+//}
 
 // ->setSortable(), ->getSortable()
 $t->diag('->setSortable(), ->getSortable()');

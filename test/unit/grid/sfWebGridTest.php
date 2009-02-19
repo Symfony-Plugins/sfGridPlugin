@@ -11,6 +11,33 @@
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfDataSourceMock.class.php');
 
+// initialize Context, required for url_for routing context
+require_once(dirname(__FILE__).'/../../../../../config/ProjectConfiguration.class.php');
+
+$configuration = ProjectConfiguration::getApplicationConfiguration($app, $env, isset($debug) ? $debug : true);
+sfContext::createInstance($configuration);  
+
+$context = sfContext::getInstance();
+$context->set('user', new FakeUser());
+
+
+class FakeUser
+{
+  public function setAttribute()
+  {
+  }
+  
+  public function getAttribute()
+  {
+    return null;
+  }
+  
+  public function shutdown()
+  {
+  }
+  
+}
+
 class sfWebGridTest extends sfWebGrid
 {
   public function configure()
@@ -22,17 +49,29 @@ class sfWebGridTest extends sfWebGrid
 
 class sfWebRequestMock extends sfWebRequest
 {
-  public function __construct() {}
+  protected $getParams = array(
+    'sort'        => 'id',
+    'type'        => 'desc',
+    'page'        => 2,
+    'param'       => 'value',
+  );
   
+  public function __construct() {
+    $this->parameterHolder = new sfParameterHolder();
+
+    $this->parameterHolder->add($this->getParams);
+  }
+      
   public function getGetParameters()
   {
-    return array(
-      'sort'        => 'id',
-      'sort_order'  => 'desc',
-      'page'        => 2,
-      'param'       => 'value',
-    );
+    return $this->getParams;
   }
+
+  public function getParameter($name, $default = null)
+  {
+    return $this->parameterHolder->get($name, $default);
+  }
+  
   
   public function getUri()
   {
@@ -47,7 +86,7 @@ $t->diag('->bind()');
 $request = new sfWebRequestMock();
 $g = new sfWebGridTest(new sfDataSourceMock());
 $g->bind($request);
-$t->is($g->getUri(), 'http://test.com', '->bind() sets the grid URI to the URI of the given request');
+$t->is($g->getUri(), '/', '->bind() sets the grid URI to the URI of the given request, relative path!');
 $t->is($g->getSortColumn(), 'id', '->bind() sets the sort column using the GET parameter "sort"');
-$t->is($g->getSortOrder(), 'desc', '->bind() sets the sort order using the GET parameter "sort_order"');
+$t->is($g->getSortOrder(), 'desc', '->bind() sets the sort order using the GET parameter "type"');
 $t->is($g->getPager()->getPage(), 2, '->bind() sets the current page using the GET parameter "page"');

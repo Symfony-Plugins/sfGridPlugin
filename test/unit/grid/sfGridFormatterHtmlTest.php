@@ -11,7 +11,13 @@
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfGridMock.class.php');
 
-$t = new lime_test(54, new lime_output_color());
+// initialize Context, required for url_for routing context
+require_once(dirname(__FILE__).'/../../../../../config/ProjectConfiguration.class.php');
+
+$configuration = ProjectConfiguration::getApplicationConfiguration($app, $env, isset($debug) ? $debug : true);
+sfContext::createInstance($configuration);  
+
+$t = new lime_test(53, new lime_output_color());
 
 // Iterator interface
 $t->diag('Iterator interface');
@@ -51,15 +57,21 @@ catch (LogicException $e)
   $t->pass('->renderColumnHead() throws a "LogicException" if the given column is set to sortable, but no URI has been set');
 }
 $g->setUri('http://test.com');
-$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?sort=id&sort_order=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
-$g->setUri('http://test.com?param=value&sort=column&sort_order=desc');
-$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?param=value&sort=id&sort_order=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
 
 $g->setSort('id', 'asc');
-$t->is($f->renderColumnHead('id'), '<th><a class="sort_asc" href="http://test.com?param=value&sort=id&sort_order=desc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+$t->is($f->renderColumnHead('id'), '<th class="sort_asc"><a href="http://test.com?sort=id&type=desc">Id</a></th>', '->renderColumnHead() returns the head of a column');
 
 $g->setSort('id', 'desc');
-$t->is($f->renderColumnHead('id'), '<th><a class="sort_desc" href="http://test.com?param=value&sort=id&sort_order=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+$t->is($f->renderColumnHead('id'), '<th class="sort_desc"><a href="http://test.com?sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+
+// Bernhard, this fails now, since I loose all parameters (by design). 
+// Do you think this is required! (do you need the parameters), I store 
+// parameters in the user-session, and don't set them in the URL
+
+//$g->setUri('http://test.com?param=value&sort=column&type=desc');
+//$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?param=value&sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+
 
 $f = new sfGridFormatterHtml(new sfGridMock(array('name')));
 try
@@ -112,16 +124,17 @@ catch (LogicException $e)
   $t->pass('->renderPager() throws a "LogicException" if no URI has been set');
 }
 
+// Bernhard, again I strip the parameters with setUri 
 $g->setUri('http://test.com?param=value&page=100');
 $output = <<<EOF
-<div>
+<div class="paging">
   1
-  <a href="http://test.com?param=value&page=2">2</a>
-  <a href="http://test.com?param=value&page=3">3</a>
-  <a href="http://test.com?param=value&page=4">4</a>
-  <a href="http://test.com?param=value&page=5">5</a>
-  <a href="http://test.com?param=value&page=2">&raquo;</a>
-  <a href="http://test.com?param=value&page=5">&raquo;|</a>
+  <a href="http://test.com?page=2">2</a>
+  <a href="http://test.com?page=3">3</a>
+  <a href="http://test.com?page=4">4</a>
+  <a href="http://test.com?page=5">5</a>
+  <a href="http://test.com?page=2">&raquo;</a>
+  <a href="http://test.com?page=5">&raquo;|</a>
 </div>
 
 EOF;
@@ -129,7 +142,7 @@ $t->is($f->renderPager(), $output, '->renderPager() renders the pager');
 
 $g->setUri('http://test.com');
 $output = <<<EOF
-<div>
+<div class="paging">
   1
   <a href="http://test.com?page=2">2</a>
   <a href="http://test.com?page=3">3</a>
@@ -144,7 +157,7 @@ $t->is($f->renderPager(), $output, '->renderPager() renders the pager');
 
 $g->getPager()->setPage(2);
 $output = <<<EOF
-<div>
+<div class="paging">
   <a href="http://test.com?page=1">&laquo;</a>
   <a href="http://test.com?page=1">1</a>
   2
@@ -160,7 +173,7 @@ $t->is($f->renderPager(), $output, '->renderPager() renders the pager');
 
 $g->getPager()->setPage(4);
 $output = <<<EOF
-<div>
+<div class="paging">
   <a href="http://test.com?page=1">|&laquo;</a>
   <a href="http://test.com?page=3">&laquo;</a>
   <a href="http://test.com?page=1">1</a>
@@ -176,7 +189,7 @@ $t->is($f->renderPager(), $output, '->renderPager() renders the pager');
 
 $g->getPager()->setPage(5);
 $output = <<<EOF
-<div>
+<div class="paging">
   <a href="http://test.com?page=1">|&laquo;</a>
   <a href="http://test.com?page=4">&laquo;</a>
   <a href="http://test.com?page=1">1</a>

@@ -31,7 +31,6 @@ class sfWebGrid extends sfGrid
     
 //    $parameters = $request->getRequestParameters();
     
-    
     $page = $request->getParameter('page', $user->getAttribute('page', null, $this->getNamespace()));
     if ($page != null)
     {

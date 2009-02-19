@@ -8,12 +8,18 @@
  * file that was distributed with this source code.
  */
 
-if (!isset($_SERVER['SYMFONY']))
-{
-  throw new RuntimeException('Could not find symfony core libraries.');
-}
+$app = 'backend';
+$env = 'test';
+
 
 $_test_dir = realpath(dirname(__FILE__).'/..');
+
+if (!isset($_SERVER['SYMFONY']))
+{
+  //throw new RuntimeException('Could not find symfony core libraries.');
+  
+  $_SERVER['SYMFONY'] = $_test_dir.'/../../../lib/symfony/lib';
+}
 
 // register symfony files
 require_once $_SERVER['SYMFONY'].'/autoload/sfCoreAutoload.class.php';
@@ -26,3 +32,4 @@ sfSimpleAutoload::register();
 
 // load lime
 require_once $_SERVER['SYMFONY'].'/vendor/lime/lime.php';
+

@@ -83,6 +83,8 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   
   public function renderPager()
   {
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url'));
+    
     $uri = $this->grid->getUri();
     if (empty($uri))
     {
@@ -113,7 +115,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     }
     if ($pager->hasNextPage())
     {
-      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getNextPage()), '', '&')) . "\">".self::PREV."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getNextPage()), '', '&')) . "\">".self::NEXT."</a>\n";
     }
     if ($pager->hasLastPage())
     {
@@ -158,6 +160,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   
   public function renderColumnHead($column)
   {
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url'));
 //    $widget = $this->grid->getWidget($column); //this is not used, if it gets used, it should be a columnHEADrenderWidget
 
     $html = $this->grid->getTitleForColumn($column);
