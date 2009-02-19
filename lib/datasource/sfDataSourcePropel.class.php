@@ -67,6 +67,13 @@ class sfDataSourcePropel extends sfDataSource
    * @var array    data
    */
   protected $data     = null;
+  
+  /**
+   * Database Connection
+   *
+   * @var PropelPDO 
+   */
+  protected $connection = null;
     
   /**
    * Constructor.
@@ -121,8 +128,11 @@ class sfDataSourcePropel extends sfDataSource
       
       $tmp = new $source();
       $peer = $tmp->getPeer();
+      $tableMap = call_user_func_array(array($peer, 'getTableMap'), array());
       
       $this->countCriteria = new Criteria();
+      $this->countCriteria->setPrimaryTableName($tableMap->getName());
+      call_user_func_array(array($peer, 'addSelectColumns'), array($this->countCriteria));
       
       $this->selectCriteria = clone $this->countCriteria;
       
@@ -161,7 +171,7 @@ class sfDataSourcePropel extends sfDataSource
    */
   private function loadData()
   {
-    $stmt = BasePeer::doSelect($this->selectCriteria, $con = null);
+    $stmt = BasePeer::doSelect($this->selectCriteria, $this->connection);
     
     $results = $stmt->fetchAll(PDO::FETCH_NUM);
     
@@ -180,6 +190,17 @@ class sfDataSourcePropel extends sfDataSource
       $this->data[] = $row;      
     }
   }
+  
+  /**
+   * sets the connection to the database 
+   *
+   * @param PropelPDO $connection
+   */
+  public function setConnection($connection)
+  {
+    $this->connection = $connection;
+  }
+  
 
   /**
    * Returns the value of the given field of the current record while iterating.
@@ -260,7 +281,7 @@ class sfDataSourcePropel extends sfDataSource
     }
     
     // BasePeer returns a PDOStatement
-    $stmt = BasePeer::doCount($criteria, $con = null);
+    $stmt = BasePeer::doCount($criteria, $this->connection);
 
     if ($row = $stmt->fetch(PDO::FETCH_NUM)) 
     {
@@ -279,7 +300,7 @@ class sfDataSourcePropel extends sfDataSource
    */
   public function hasColumn($column)
   {
-    return array_search($column, $this->selectCriteria->getSelectColumns());
+    return in_array($column, $this->selectCriteria->getSelectColumns());
   }
   
   /**
