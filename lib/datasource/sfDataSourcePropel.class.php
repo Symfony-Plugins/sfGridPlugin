@@ -74,6 +74,13 @@ class sfDataSourcePropel extends sfDataSource
 	 * @var PropelPDO
 	 */
 	protected $connection = null;
+	
+	/**
+	 * The name of the base Class (an object from the data model)
+	 *
+	 * @var string
+	 */
+	protected $baseClass = null;
 
 	/**
 	 * Resolves the (last) ClassName from the objectPath
@@ -252,12 +259,16 @@ class sfDataSourcePropel extends sfDataSource
 	 * Criteria object. Custom criteria objects will not get hydrated, objects
 	 * names are!
 	 * the Criteria object will be cloned, since it will be modified internally.
+	 * 
+	 * In the future the objectPaths can become optional, since these can be resolved 
+	 * lazy from the property paths of a grid->setColumns(...)
 	 *
 	 * <code>
 	 * // fetches all user objects, and their related userProfiles from objectPath
 	 * $source = new sfDataSourcePropel('User', 'User.UserProfile');
 	 * // exactly the same:
 	 * $source = new sfDataSourcePropel(array('User.UserProfile'));
+	 * // since array is optional, and 'User' is resolved from 'User.UserProfile'  
 	 * // this source->current() will return a hydrated object of the base object (User)
 	 *
 	 * // fetches user objects from Criteria
@@ -273,18 +284,17 @@ class sfDataSourcePropel extends sfDataSource
 	 * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
 	 * </code>
 	 *
-	 * @param  mixed $source             The data source
+	 * @param  mixed $source             The data source (a select Criteria, or an 
+	 *                                   (array of) object Path(s)  
 	 * @param  Criteria $countCriteria   The count Criteria, required when providing
 	 *                                   a Criteria object as source.
-	 * @throws UnexpectedValueException  Throws an exception if the source is a
-	 *                                   string, but not an existing class name
-	 * @throws UnexpectedValueException  Throws an exception if the source is a
-	 *                                   valid class name that does not inherit
-	 *                                   Doctrine_Record
+	 * @throws LogicException            Throws an exception if the source is a
+	 *                                   string, but not an existing Propel class name
+	 * @throws UnexpectedValueException  Throws an exception if the select source is 
+	 *                                   a Criteria, but is missing a count Criteria
 	 * @throws InvalidArgumentException  Throws an exception if the source is
-	 *                                   neither a valid model class name nor an
-	 *                                   instance of Doctrine_Query or
-	 *                                   Doctrine_Collection.
+	 *                                   neither a valid propel model class name 
+	 *                                   nor a Criteria.
 	 */
 	public function __construct($source, $countCriteria = null)
 	{
@@ -299,14 +309,14 @@ class sfDataSourcePropel extends sfDataSource
 		{
 			// generate an array of classes to be retrieved from DB
 			$classes = array();
-			$baseClass = self::resolveBaseClass($source[0]);
+			$this->baseClass = self::resolveBaseClass($source[0]);
 			foreach ($source as $objectPath)
 			{
 				// test if there is only one base class
-				if ($baseClass != ($currentBaseClass = self::resolveBaseClass($objectPath)))
+				if ($this->baseClass != ($currentBaseClass = self::resolveBaseClass($objectPath)))
 				{
 					throw new LogicException(sprintf('Not all base classes are the same.
-      		                                  Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
+      		                                  Resolved "%s", while expecting "%s"', $currentBaseClass, $this->baseClass));
 				}
 				 
 				// test if relations are valid
@@ -314,7 +324,7 @@ class sfDataSourcePropel extends sfDataSource
 
 				$classes =  self::resolveAllClasses($objectPath, $classes);
 			}
-			$basePeer = $baseClass.'Peer';
+			$basePeer = $this->baseClass.'Peer';
 			
 			// construct full hydration-profile
 			$this->selectCriteria = new Criteria();
@@ -385,14 +395,8 @@ class sfDataSourcePropel extends sfDataSource
       $this->countCriteria->clearSelectColumns();
       $this->countCriteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
             
-      $this->countCriteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME')); // or $baseClass
-      call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($this->countCriteria, $baseClass));
-      
-
-//			print_r($classes);
-//			echo ($this->selectCriteria->toString() );
-//			die ('<br>tot nu toe goed... genoeg.');
-
+      $this->countCriteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME')); // @todo: or maybe $this->baseClass
+      call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($this->countCriteria, $this->baseClass));
 		}
 		// ...the source can also be passed as custom criteria, these will not be hydrated!
 		elseif ($source instanceof Criteria)
@@ -432,8 +436,9 @@ class sfDataSourcePropel extends sfDataSource
 
 		$this->data = array();
 
+		// @todo: test for $this->baseClass, if set, fill data[] with hydrated objects, instead of rows.
+		
 		$selectColumns = $this->selectCriteria->getSelectColumns();
-
 		foreach ($results as $result)
 		{
 			$row = array();
@@ -484,15 +489,12 @@ class sfDataSourcePropel extends sfDataSource
 			$this->loadData();
 		}
 
-		// if this object has been initialized with a Doctrine_Collection, we need
-		// to add the offset while retrieving objects
-		$offset = $this->getOffset();
-
 		if (!$this->valid())
 		{
 			throw new OutOfBoundsException(sprintf('The result with index %s does not exist', $this->key()));
 		}
 
+		// @todo: check if $this->baseClass is set, if so return object->get... instead of direct value from result set 
 		return $this->data[$this->key()];
 	}
 
