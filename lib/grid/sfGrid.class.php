@@ -293,6 +293,16 @@ class sfGrid implements Countable
 
     return $this->formatter->render();
   }
+  
+  /**
+   * Renders the grid
+   *
+   * @see render()
+   */
+  public function __toString()
+  {
+  	return $this->render();
+  }
 
   /**
    * Returns the number of rows in the grid.
