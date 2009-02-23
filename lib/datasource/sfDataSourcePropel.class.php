@@ -74,7 +74,7 @@ class sfDataSourcePropel extends sfDataSource
    * @var PropelPDO
    */
   protected $connection = null;
-  
+
   /**
    * The name of the base Class (an object from the data model)
    *
@@ -85,7 +85,7 @@ class sfDataSourcePropel extends sfDataSource
   protected $extraColumns = array();
 
   protected $extraColumnsData = array();
-  
+
   /**
    * Resolves the (last) ClassName from the objectPath
    *
@@ -185,7 +185,7 @@ class sfDataSourcePropel extends sfDataSource
         throw new LogicException(sprintf('Class "%s" does not exist.
                                           Please note: don\'t use the getter for the foreign-key value, but the getter for the related class instance', $relatedClassName));
       }
-       
+
       // test here for add-er
       $relatedReflection = new ReflectionClass($relatedClassName);
       if (!$relatedReflection->hasMethod($addMethod))
@@ -263,8 +263,8 @@ class sfDataSourcePropel extends sfDataSource
    * Criteria object. Custom criteria objects will not get hydrated, objects
    * names are!
    * the Criteria object will be cloned, since it will be modified internally.
-   * 
-   * In the future the objectPaths can become optional, since these can be resolved 
+   *
+   * In the future the objectPaths can become optional, since these can be resolved
    * lazy from the property paths of a grid->setColumns(...)
    *
    * <code>
@@ -272,7 +272,7 @@ class sfDataSourcePropel extends sfDataSource
    * $source = new sfDataSourcePropel('User', 'User.UserProfile');
    * // exactly the same:
    * $source = new sfDataSourcePropel(array('User.UserProfile'));
-   * // since array is optional, and 'User' is resolved from 'User.UserProfile'  
+   * // since array is optional, and 'User' is resolved from 'User.UserProfile'
    * // this source->current() will return a hydrated object of the base object (User)
    *
    * // fetches user objects from Criteria
@@ -288,16 +288,16 @@ class sfDataSourcePropel extends sfDataSource
    * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
    * </code>
    *
-   * @param  mixed $source             The data source (a select Criteria, or an 
-   *                                   (array of) object Path(s)  
+   * @param  mixed $source             The data source (a select Criteria, or an
+   *                                   (array of) object Path(s)
    * @param  Criteria $countCriteria   The count Criteria, required when providing
    *                                   a Criteria object as source.
    * @throws LogicException            Throws an exception if the source is a
    *                                   string, but not an existing Propel class name
-   * @throws UnexpectedValueException  Throws an exception if the select source is 
+   * @throws UnexpectedValueException  Throws an exception if the select source is
    *                                   a Criteria, but is missing a count Criteria
    * @throws InvalidArgumentException  Throws an exception if the source is
-   *                                   neither a valid propel model class name 
+   *                                   neither a valid propel model class name
    *                                   nor a Criteria.
    */
   public function __construct($source, $countCriteria = null)
@@ -316,7 +316,7 @@ class sfDataSourcePropel extends sfDataSource
       $this->baseClass = self::resolveBaseClass($source[0]);
       $this->objectPaths = $source;
       $basePeer = $this->baseClass.'Peer';
-      
+
       foreach ($this->objectPaths as $objectPath)
       {
         // validation checks @todo: this can be skipped in production
@@ -332,10 +332,10 @@ class sfDataSourcePropel extends sfDataSource
         // get flat array of classes that need to get hydrated
         $classes =  self::resolveAllClasses($objectPath, $classes);
       }
-      
+
       // construct full hydration-profile
       $this->selectCriteria = new Criteria();
-      
+
       $this->selectCriteria->setDbName(constant($basePeer.'::DATABASE_NAME'));
 
       // process all classes
@@ -343,10 +343,10 @@ class sfDataSourcePropel extends sfDataSource
       {
         // TODO: should I start with the base $class??? in that case do it before the foreach and skip base in foreach
         $peer = $class['className'].'Peer';
-         
+
         //add alias for tables
         $this->selectCriteria->addAlias($alias, constant($peer.'::TABLE_NAME'));
-         
+
         //addSelectColumns
         call_user_func_array(array($peer, 'addSelectColumnsAliased'), array($this->selectCriteria, $alias));
 
@@ -389,20 +389,20 @@ class sfDataSourcePropel extends sfDataSource
               }
             }
           }
-           
+
           $joinColumnLeft  = call_user_func_array(array($peer, 'alias'), array($alias, constant($peer.'::'.$baseFKName)));
           $joinColumnRight = call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, constant($relatedPeer.'::'.$relatedPKName)));
           $joinType = Criteria::LEFT_JOIN; //TODO: add lookup table that can define the joinType
-           
+
           $this->selectCriteria->addJoin($joinColumnLeft, $joinColumnRight, $joinType);
         }
       }
-      
+
       // doCount
       $this->countCriteria = clone $this->selectCriteria;
       $this->countCriteria->clearSelectColumns();
       $this->countCriteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-            
+
       $this->countCriteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME')); // @todo: or maybe $this->baseClass
       call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($this->countCriteria, $this->baseClass));
     }
@@ -416,7 +416,7 @@ class sfDataSourcePropel extends sfDataSource
 
       $this->selectCriteria = clone $source;
       $this->countCriteria = clone $countCriteria;
-      
+
       // reset
       $this->baseClass = null;
       $this->objectPaths = array();
@@ -427,7 +427,7 @@ class sfDataSourcePropel extends sfDataSource
       throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
     }
   }
-  
+
   /**
    * Add an extra Column to the query
    *
@@ -472,17 +472,17 @@ class sfDataSourcePropel extends sfDataSource
       }
       //remove the base class from the list
       array_shift($classes);
-      
+
       foreach ($results as $row)
       {
         $startcol = 0;
-        
+
         // first hydrate base object
         $key = call_user_func_array(array($basePeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
-        if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null) 
+        if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null)
         {
           $omClass = call_user_func(array($basePeer, 'getOMClass'));
-  
+
           $cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
           $instance = new $cls();
           $instance->hydrate($row);
@@ -496,7 +496,7 @@ class sfDataSourcePropel extends sfDataSource
         {
           $relatedClassName = $relatedClass['className'];
           $relatedPeer = $relatedClassName.'Peer';
-          
+
           $key = call_user_func_array(array($relatedPeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
           if ($key !== null)
           {
@@ -504,19 +504,19 @@ class sfDataSourcePropel extends sfDataSource
             if (!$relatedObj)
             {
               $omClass = call_user_func(array($relatedPeer, 'getOMClass'));
-    
+
               $cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
               $relatedObj = new $cls();
               $relatedObj->hydrate($row, $startcol);
               call_user_func_array(array($relatedPeer, 'addInstanceToPool'), array($relatedObj, $key));
             }
-            
+
             $paths = explode('_', $path);// @TODO: check if exploding if _ is always OK...
             $nrPaths = count($paths);
             $addMethod = sfDataSourcePropel::resolveAddMethodFromObjectPath($paths[$nrPaths-2].'.'.$paths[$nrPaths-1]);
-            
+
             $parent = $instance;
-            // remove base object and getter from path  
+            // remove base object and getter from path
             array_shift($paths); array_pop($paths);
             foreach ($paths as $getMethod)
             {
@@ -524,20 +524,20 @@ class sfDataSourcePropel extends sfDataSource
             }
             call_user_func_array(array($relatedObj, $addMethod), array($parent));
           }
-          
+
           // add column-count to startcol for next object
           $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
         }
-        
+
         foreach ($this->extraColumns as $extraColumn)
         {
           $this->hold($extraColumn, $row[$startcol++]);
         }
-        
+
         $this->data[] = $instance;
       }
     }
-    // or return raw result sets in case custom criteria objects have been provided 
+    // or return raw result sets in case custom criteria objects have been provided
     else
     {
       $selectColumns = $this->selectCriteria->getSelectColumns();
@@ -552,7 +552,7 @@ class sfDataSourcePropel extends sfDataSource
         $this->data[] = $row;
       }
     }
-    
+
     $stmt->closeCursor();
   }
 
@@ -576,7 +576,7 @@ class sfDataSourcePropel extends sfDataSource
   public function offsetGet($field)
   {
     $current = $this->current();
-    
+
     // hydrate objects in case object paths have been defined
     if ($this->baseClass != null)
     {
@@ -585,7 +585,7 @@ class sfDataSourcePropel extends sfDataSource
       {
         list($class, $getters) = explode('.', $field, 2);
         $result = $current;
-        
+
         $getters .= '.';
         while (strlen($getters) > 0)
         {
@@ -594,13 +594,13 @@ class sfDataSourcePropel extends sfDataSource
           {
             $result = call_user_func(array($result, 'get'.$getter));
           }
-          else 
+          else
           {
-            // return null, since left-join didn't retreived a related object 
+            // return null, since left-join didn't retreived a related object
             return null;
           }
         }
-      } 
+      }
       //custom column
       else
       {
@@ -611,7 +611,7 @@ class sfDataSourcePropel extends sfDataSource
     {
       $result = $current[$field];
     }
-    
+
     return $result;
   }
 
@@ -635,7 +635,7 @@ class sfDataSourcePropel extends sfDataSource
       throw new OutOfBoundsException(sprintf('The result with index %s does not exist', $this->key()));
     }
 
-    // @todo: check if $this->baseClass is set, if so return object->get... instead of direct value from result set 
+    // @todo: check if $this->baseClass is set, if so return object->get... instead of direct value from result set
     return $this->data[$this->key()];
   }
 
@@ -767,7 +767,7 @@ class sfDataSourcePropel extends sfDataSource
       }
       $column .= '.'.$fieldName;
     }
-        
+
     switch ($order)
     {
       case sfDataSourceInterface::ASC:
@@ -782,13 +782,13 @@ class sfDataSourcePropel extends sfDataSource
     $this->refresh();
   }
 
-  protected function hold($key, $value) 
+  protected function hold($key, $value)
   {
-    $this->extraColumnsData[$key] = $value; 
+    $this->extraColumnsData[$key] = $value;
   }
-  
+
   protected function fetch($key)
   {
     return $this->extraColumnsData[$key];
-  }    
+  }
 }

@@ -1,10 +1,106 @@
-This plugin contains a grid subframework that allows to read various data sources in a unified way. These data sources can be rendered in a 
+INTRODUCTION
+------------
+
+This plugin contains a grid subframework that allows to read various data sources in a unified way. These data sources can be rendered in a
 customizable grid with a custom formatter. The code of this plugin will eventually become bundled with symfony 1.3.
 
-Currently, arrays and Doctrine tables can be used as data sources. Propel, XML and CSV are planned for the final version Only a HTML formatter is 
-currently supported. A raw text formatter and an XML formatter are planned for the final version.
+Currently arrays, Propel and Doctrine tables can be used as data sources. XML and CSV are planned for the final version. Only a HTML formatter is
+currently supported. A raw text formatter JSON and an XML formatter are planned for the final version.
 
 THIS PLUGIN IS IN VERY EARLY ALPHA STAGES AND IS NOT RECOMMENDED FOR PRODUCTION USE.
+
+
+HOWTO
+-----
+
+A quick guide to show how to start using the sfGrid and sfDataSource(Propel) implementations.
+
+Before you can start using the sfDataSourcePropel, you should know it makes use of a slightly modified propel generator. To activate this extension
+you should change your config/propel.ini and set
+
+propel.builder.peer.class = plugins.sfGridPlugin.lib.builder.SfPeerBuilderDS
+
+run
+symfony propel:build-model
+
+in order to make use of the new peer method: addSelectColumnsAliased (which is an extension of the addSelectColumns combined with the alias method).
+
+Now you are ready to make use of the sfDataSourcePropel class. This can be provided to the sfGrid in order to render the data to the screen.
+However a slightly more specialised version of the sfGrid: the sfWebGrid will be used, that can be bond to the webRequest in order to automatically process the
+interaction in the grid (the sorting and paging).
+Before you can render your grid in a template, you first have to provide the columns from your sfDataSource to the grid. Besides you probably want to define the
+title for the columns in your grid.
+
+For the following schema.yml:
+
+propel:
+  album:
+    id:
+    album_id:
+    map:          varchar(255)
+    title:        varchar(255)
+    description:  LONGVARCHAR
+  foto:
+    id:
+    album_id:
+    filename:     varchar(255)
+    title:        varchar(255)
+    description:  LONGVARCHAR
+
+
+Lets see that in action.class.php:
+
+    $source = new sfDataSourcePropel('Album');
+
+    $this->grid = new sfWebGrid($source);
+    $this->grid->bind($request);
+
+    $this->grid->setFormatterName('html');
+    // sorting is disabled by default
+    $this->grid->setSortable(sfGrid::ALL);
+
+    $this->grid->setColumns(array('Album.Title'));
+    $this->grid->setColumnTitles(array('Album.Title' => 'Title'));
+
+And in your template enter:
+
+    <table>
+    <?php echo $grid ?>
+    </table>
+
+
+The naming for the properties are similar to the getters. This does not stop at the directly related properties, you can also provide related class-names.
+To demonstrate this, lets make the example a little more exiting:
+
+    //this makes the sfDataSourcePropel class automatically resolve the relation between both classes, select all their columns, set the join and perform the hydration
+    $source = new sfDataSourcePropel('Foto', 'Foto.Album');
+
+    $this->grid = new sfWebGrid($source);
+    $this->grid->bind($request);
+
+    $this->grid->setFormatterName('html');
+    // sorting is disabled by default
+    $this->grid->setSortable(sfGrid::ALL);
+
+    // and now we can use properties from both classes, without additional queries!
+    $this->grid->setColumns(array('Foto.Title', 'Foto.Album.Title'));
+    $this->grid->setColumnTitles(array('Foto.Album.Title' => 'Title', 'Foto.Album.Title' => 'Album'));
+
+Try it yourself:
+todo: tell about providing custom select- and countCriteria objects with resultsets that won't get hydrated (this is already imlemented)
+todo: tell about adding custom Select-Columns to the query, for example to do a MySQL CONCAT (already implemented)
+todo: tell about adding custom getters to your model (this is also already possible)
+todo: tell about modifying the Html-Grid-formatters
+todo: tell about support for multiple ForeignKeys refering to a same Table (like created_by and updated_by), which introduces RelatedBy in the name of the getters.
+
+
+TODO
+----
+
+I want to make the arguments for the sfDataSourcePropel constructor obsolete, since these can be deducted and passed through by the grid->setColumns method.
+Currently only left_joins are performed, in the future you will be able to define the kind of join yourself.
+Currently sorting is done on only one column, in the future you will be able to sort on multiple columns. And be able to trigger multi-sort when pressing one Column-header (For example when you want to sort on [FirstName,LastName])
+Add an example CSS
 
 LICENSE
 -------
