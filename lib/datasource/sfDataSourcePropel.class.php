@@ -55,9 +55,9 @@
 class sfDataSourcePropel extends sfDataSource
 {
   /**
-   * @var Criteria criteria
+   * @var Criteria selectCriteria
    */
-  protected $criteria = null;
+  protected $selectCriteria = null;
   /*
    * @var Criteria countCriteria
    */
@@ -82,6 +82,9 @@ class sfDataSourcePropel extends sfDataSource
    */
   protected $baseClass = null;
   protected $objectPaths = array();
+  protected $extraColumns = array();
+
+  protected $extraColumnsData = array();
   
   /**
    * Resolves the (last) ClassName from the objectPath
@@ -417,11 +420,24 @@ class sfDataSourcePropel extends sfDataSource
       // reset
       $this->baseClass = null;
       $this->objectPaths = array();
+      $this->extraColumns = array();
     }
     else
     {
       throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
     }
+  }
+  
+  /**
+   * Add an extra Column to the query
+   *
+   * @param string $name
+   * @param string $clause
+   */
+  public function addExtraColumn($name, $clause)
+  {
+    $this->selectCriteria->addAsColumn($name, $clause);
+    $this->extraColumns[] = $name;
   }
 
   /**
@@ -513,6 +529,11 @@ class sfDataSourcePropel extends sfDataSource
           $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
         }
         
+        foreach ($this->extraColumns as $extraColumn)
+        {
+          $this->hold($extraColumn, $row[$startcol++]);
+        }
+        
         $this->data[] = $instance;
       }
     }
@@ -531,6 +552,8 @@ class sfDataSourcePropel extends sfDataSource
         $this->data[] = $row;
       }
     }
+    
+    $stmt->closeCursor();
   }
 
   /**
@@ -557,23 +580,31 @@ class sfDataSourcePropel extends sfDataSource
     // hydrate objects in case object paths have been defined
     if ($this->baseClass != null)
     {
-      // @todo: parse property path
-      list($class, $getters) = explode('.', $field, 2);
-      $result = $current;
-      
-      $getters .= '.';
-      while (strlen($getters) > 0)
+      // check for object property or custom column
+      if (strpos($field, '.') !== false)
       {
-        list($getter, $getters) = explode('.', $getters, 2);
-        if (isset($result))
+        list($class, $getters) = explode('.', $field, 2);
+        $result = $current;
+        
+        $getters .= '.';
+        while (strlen($getters) > 0)
         {
-          $result = call_user_func(array($result, 'get'.$getter));
+          list($getter, $getters) = explode('.', $getters, 2);
+          if (isset($result))
+          {
+            $result = call_user_func(array($result, 'get'.$getter));
+          }
+          else 
+          {
+            // return null, since left-join didn't retreived a related object 
+            return null;
+          }
         }
-        else 
-        {
-          // return null, since left-join didn't retreived a related object 
-          return null;
-        }
+      } 
+      //custom column
+      else
+      {
+        return $this->fetch($field);
       }
     }
     else
@@ -671,6 +702,7 @@ class sfDataSourcePropel extends sfDataSource
     {
       // @todo: not always true of course...
       return true;
+      // also check for extraColumns...
     }
     else
     {
@@ -724,7 +756,7 @@ class sfDataSourcePropel extends sfDataSource
     $this->selectCriteria->clearOrderByColumns();
 
     // translate $column to propel column-name
-    if ($this->baseClass != null)
+    if ($this->baseClass != null && (strpos($column, '.') !== false))
     {
       $parts = explode('.', $column);
       $column = array_shift($parts);
@@ -750,4 +782,13 @@ class sfDataSourcePropel extends sfDataSource
     $this->refresh();
   }
 
+  protected function hold($key, $value) 
+  {
+    $this->extraColumnsData[$key] = $value; 
+  }
+  
+  protected function fetch($key)
+  {
+    return $this->extraColumnsData[$key];
+  }    
 }
