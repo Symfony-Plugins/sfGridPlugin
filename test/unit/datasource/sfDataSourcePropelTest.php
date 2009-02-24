@@ -19,12 +19,38 @@ function iterator_to_field_array($iterator, $field)
   $values = array();
   foreach ($iterator as $key => $value)
   {
-    $values[] = $value[$field];
+    $values[] = $iterator[$field];
   }
   return $values;
 }
 
+
+function iterator_ids_to_field_array($iterator)
+{
+  $values = array();
+  foreach ($iterator as $key => $value)
+  {
+    $values[] = $value->getId();
+  }
+  return $values;
+}
+
+function iterator_names_to_field_array($iterator)
+{
+  $values = array();
+  foreach ($iterator as $key => $value)
+  {
+    $values[] = $value->getName();
+  }
+  return $values;
+}
+
+
 class ProjectConfiguration extends sfProjectConfiguration {}
+
+
+$t = new lime_test(40, new lime_output_color());
+
 
 // initialize Propel
 $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_propel_%s.data', md5(__FILE__)));
@@ -34,7 +60,7 @@ $autoload->register();
 
 if (!extension_loaded('SQLite'))
 {
-  $t->skip('SQLite needed to run these tests', $tests);
+  $t->error('SQLite needed to run these tests');
   exit(0);
 }
 
@@ -63,21 +89,20 @@ foreach ($coll as $name)
   $pp->setName($name);
   $pp->save($connection);
 }
-  
+
 ini_set('session.use_cookies', 0);
 $session_id = "1";
 
-
-$t = new lime_test(36, new lime_output_color());
 
 // ->__construct()
 $t->diag('->__construct()');
 
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$t->is($s->hasColumn('person_propel.ID'), true, 'HasColumn person_propel.ID');
+$t->is($s->hasColumn('PersonPropel.Id'), true, 'HasColumn Id');
+$t->is($s->hasColumn('PersonPropel.Faked'), false, 'Has NOT Column Faked');
 
 $current = $s->current();
-$t->is($current['person_propel.ID'], 1, '->__construct() accepts a Propel class name as argument');
+$t->is($current->getId(), 1, '->__construct() accepts a Propel class name as argument');
 
 try
 {
@@ -103,10 +128,10 @@ catch (InvalidArgumentException $e)
 $t->diag('->current()');
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $current = $s->current();
-$t->is($current['person_propel.ID'], 1, '->current() returns the first result');
+$t->is($current->getId(), 1, '->current() returns the first result');
 $s->next();
 $current = $s->current();
-$t->is($current['person_propel.ID'], 2, '->current() returns the current result when iterating');
+$t->is($current->getId(), 2, '->current() returns the current result when iterating');
 
 foreach ($s as $k => $v);
 
@@ -128,8 +153,8 @@ $t->is(count(iterator_to_array($s)), 8, 'sfDataSourcePropel implements the Seeka
 
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $s->seek(1);
-$t->is($s['person_propel.ID'], 2, 'sfDataSourcePropel implements the SeekableIterator interface');
-$t->is($s['person_propel.NAME'], 'Francois', 'sfDataSourcePropel implements the SeekableIterator interface');
+$t->is($s->current()->getId(), 2, 'sfDataSourcePropel implements the SeekableIterator interface');
+$t->is($s->current()->getName(), 'Francois', 'sfDataSourcePropel implements the SeekableIterator interface');
 
 try
 {
@@ -173,37 +198,37 @@ $t->is($s->countAll(), 8, '->countAll() returns the total amount of records');
 $t->diag('->setLimit()');
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $s->setLimit(4);
-$t->is(iterator_to_field_array($s, 'person_propel.ID'), range(1,4), '->setLimit() limits the records returned by the iterator');
+$t->is(iterator_to_field_array($s, 'PersonPropel.Id'), range(1,4), '->setLimit() limits the records returned by the iterator');
 
 // ->setOffset()
 $t->diag('->setOffset()');
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $s->setOffset(3);
-$t->is(iterator_to_field_array($s, 'person_propel.ID'), range(4,8), '->setOffset() sets the offset of the iterator');
+$t->is(iterator_ids_to_field_array($s), range(4,8), '->setOffset() sets the offset of the iterator');
 
 $s->setOffset(30);
-$t->is(iterator_to_field_array($s, 'person_propel.ID'), array(), '->setOffset() sets the offset of the iterator');
+$t->is(iterator_ids_to_field_array($s), array(), '->setOffset() sets the offset of the iterator');
 
 $s->setOffset(2);
 $s->seek(1);
-$t->is($s['person_propel.ID'], 4, '->setOffset() sets the offset of the iterator');
-$t->is($s['person_propel.NAME'], 'Fabian', '->setOffset() sets the offset of the iterator');
+$t->is($s['PersonPropel.Id'], 4, '->setOffset() sets the offset of the iterator');
+$t->is($s['PersonPropel.Name'], 'Fabian', '->setOffset() sets the offset of the iterator');
 
 // ArrayAccess interface
 $t->diag('ArrayAccess interface');
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 
-$t->is($s['person_propel.ID'], 1, 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->is($s['person_propel.NAME'], 'Fabien', 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->ok(isset($s['person_propel.ID']), 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->ok(!isset($s['foobar']), 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['PersonPropel.Id'], 1, 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['PersonPropel.Name'], 'Fabien', 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->ok(isset($s['PersonPropel.Id']), 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->ok(!isset($s['PersonPropel.foobar']), 'sfDataSourcePropel implements the ArrayAccess interface'); // @TODO: fix hasColumn method
 $s->next();
-$t->is($s['person_propel.ID'], 2, 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->is($s['person_propel.NAME'], 'Francois', 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['PersonPropel.Id'] , 2, 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['PersonPropel.Name'], 'Francois', 'sfDataSourcePropel implements the ArrayAccess interface');
 
 try
 {
-  $s['person_propel.NAME'] = 'Foobar';
+  $s['PersonPropel.Name'] = 'Foobar';
   $t->fail('sfDataSourcePropel throws a "LogicException" when fields are set using ArrayAccess');
 }
 catch (LogicException $e)
@@ -212,7 +237,7 @@ catch (LogicException $e)
 }
 try
 {
-  unset($s['person_propel.NAME']);
+  unset($s['PersonPropel.Name']);
   $t->fail('sfDataSourcePropel throws a "LogicException" when fields are unset using ArrayAccess');
 }
 catch (LogicException $e)
@@ -224,7 +249,7 @@ foreach ($s as $k => $v);
 
 try
 {
-  $s['person_propel.NAME'];
+  $s->current()->getName();
   $t->fail('sfDataSourcePropel throws an "OutOfBoundsException" when fields are accessed after iterating');
 }
 catch (OutOfBoundsException $e)
@@ -233,7 +258,7 @@ catch (OutOfBoundsException $e)
 }
 try
 {
-  isset($s['person_propel.NAME']);
+  isset($s['PersonPropel.Name']);
   $t->fail('sfDataSourcePropel throws an "OutOfBoundsException" when fields are accessed after iterating');
 }
 catch (OutOfBoundsException $e)
@@ -246,11 +271,16 @@ $t->diag('->setSort()');
 $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $originalValues = $coll;
 
-$s->setSort('person_propel.NAME', sfDataSourceInterface::DESC);
+$s->setSort('PersonPropel.Name', sfDataSourceInterface::DESC);
 rsort($originalValues);
-$t->is(iterator_to_field_array($s, 'person_propel.NAME'), $originalValues, '->setSort() sorts correctly');
+$t->is(iterator_to_field_array($s, 'PersonPropel.Name'), $originalValues, '->setSort() sorts correctly');
 
-$s->setSort('person_propel.NAME', sfDataSourceInterface::ASC);
+$s->setSort('PersonPropel.Name', sfDataSourceInterface::ASC);
 sort($originalValues);
-$t->is(iterator_to_field_array($s, 'person_propel.NAME'), $originalValues, '->setSort() sorts correctly');
+$t->is(iterator_names_to_field_array($s), $originalValues, '->setSort() sorts correctly');
 
+// static methods
+$t->diag('testing static methods');
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.Child.ChildChild'), 'addBase', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1.ChildChild'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');

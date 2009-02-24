@@ -58,18 +58,21 @@ class sfDataSourcePropel extends sfDataSource
    * @var Criteria selectCriteria
    */
   protected $selectCriteria = null;
-  /*
+
+  /**
    * @var Criteria countCriteria
    */
   protected $countCriteria = null;
 
   /**
+   * Data contains references to the hydrated results, or in case of custom criteria: raw values in associative arrays
+   *
    * @var array    data
    */
   protected $data     = null;
 
   /**
-   * Database Connection
+   * Database Connection, making it possible to use multiple connections in your applicationx
    *
    * @var PropelPDO
    */
@@ -78,12 +81,31 @@ class sfDataSourcePropel extends sfDataSource
   /**
    * The name of the base Class (an object from the data model)
    *
+   * This will get obsolete, objectPaths will be used instead
+   *
    * @var string
    */
   protected $baseClass = null;
+
+  /**
+   * An array of object paths that have been accumulated
+   *
+   * @var array[string]
+   */
   protected $objectPaths = array();
+
+  /**
+   * An associative array that holds the names and clauses for the custom columns
+   *
+   * @var array[string]
+   */
   protected $extraColumns = array();
 
+  /**
+   * the holder of the result for the custom query
+   *
+   * @var array[mixed]
+   */
   protected $extraColumnsData = array();
 
   /**
@@ -107,22 +129,22 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
-   * Resolves the Add-method for the last relation in an objectPath
+   * Resolves the Add-method for the first relation in an objectPath
    *
    * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
    *                           the childClassNames should have a getter in the baseClass
    * @return string            the add-Method of the child to register itself to its parent
    */
-  static public function resolveAddMethodFromObjectPath($objectPath)
+  static public function resolveFirstAddMethodForObjectPath($objectPath)
   {
     // get the latest classReference (the part after the last '.')
     $classReferences = explode('.', $objectPath);
     $className = $classReferences[0];
-    $classReference = $classReferences[count($classReferences)-1];
+//    $classReference = $classReferences[count($classReferences)-1];
 
     $related = '';
     // if there are multiple references to the same table, remove the RelatedBy.... part
-    $classParts = explode('RelatedBy', $classReference);
+    $classParts = explode('RelatedBy', $classReferences[1]);
     if (count($classParts)>1)
     {
       $related = 'RelatedBy'.$classParts[1];
@@ -152,7 +174,7 @@ class sfDataSourcePropel extends sfDataSource
     // then it must be an existing class
     if (!class_exists($className))
     {
-      throw new LogicException(sprintf('Class "%s" does not exist', $className));
+      throw new UnexpectedValueException(sprintf('Class "%s" does not exist', $className));
     }
 
     // class should be extension of Propel BaseObject
@@ -177,7 +199,7 @@ class sfDataSourcePropel extends sfDataSource
       // get directly related ClassName
       $partialObjectPath = $className . '.' .$relatedClassGetter;
       $relatedClassName = self::resolveClassNameFromObjectPath($partialObjectPath);
-      $addMethod = self::resolveAddMethodFromObjectPath($partialObjectPath);
+      $addMethod = self::resolveFirstAddMethodForObjectPath($partialObjectPath);
 
       // then it must be an existing class
       if (!class_exists($relatedClassName))
@@ -429,15 +451,26 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
-   * Add an extra Column to the query
+   * Clears all extra custom columns
+   *
+   */
+  public function clearExtraColumns()
+  {
+    $this->extraColumns = array();
+  }
+
+  /**
+   * Add an extra custom column to the query
    *
    * @param string $name
    * @param string $clause
    */
   public function addExtraColumn($name, $clause)
   {
+    $this->extraColumns[$name] = $clause;
+
+    // @todo move this
     $this->selectCriteria->addAsColumn($name, $clause);
-    $this->extraColumns[] = $name;
   }
 
   /**
@@ -451,6 +484,12 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
+   * private method to load the Data,
+   *
+   * the functionality depends on the constructor call (have custom Criteria been provided, or is hydration of objects possible)
+   */
+
+  /**
    * Loads the data from the database and places it in an array.
    */
   private function loadData()
@@ -459,7 +498,11 @@ class sfDataSourcePropel extends sfDataSource
 
     $results = $stmt->fetchAll(PDO::FETCH_NUM);
 
+    // data holds all main results
     $this->data = array();
+    // extraColumnsData holds the data for the extra custom columns that have been defined
+    $this->extraColumnsData = array();
+
 
     // hydrate objects in case object paths have been defined
     if ($this->baseClass != null)
@@ -513,7 +556,7 @@ class sfDataSourcePropel extends sfDataSource
 
             $paths = explode('_', $path);// @TODO: check if exploding if _ is always OK...
             $nrPaths = count($paths);
-            $addMethod = sfDataSourcePropel::resolveAddMethodFromObjectPath($paths[$nrPaths-2].'.'.$paths[$nrPaths-1]);
+            $addMethod = sfDataSourcePropel::resolveFirstAddMethodForObjectPath($paths[$nrPaths-2].'.'.$paths[$nrPaths-1]);
 
             $parent = $instance;
             // remove base object and getter from path
@@ -557,7 +600,9 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
-   * sets the connection to the database
+   * sets the connection to the database,
+   *
+   * default connection is null to resolve the standard connection automatically
    *
    * @param PropelPDO $connection
    */
@@ -581,8 +626,10 @@ class sfDataSourcePropel extends sfDataSource
     if ($this->baseClass != null)
     {
       // check for object property or custom column
+      // @todo: maybe change syntax and don't require base-class name -> consequence first check if custom-key-columnname has been provided
       if (strpos($field, '.') !== false)
       {
+        //remove base class
         list($class, $getters) = explode('.', $field, 2);
         $result = $current;
 
@@ -700,9 +747,17 @@ class sfDataSourcePropel extends sfDataSource
   {
     if ($this->baseClass != null)
     {
-      // @todo: not always true of course...
-      return true;
-      // also check for extraColumns...
+      $classes = explode('.', $column);
+      $property = array_pop($classes);//remove the property of the properyPath
+      $classPath = implode('.', $classes);
+      self::checkObjectPath($classPath); // throws exception if classPath is invalid
+
+      $class = array_pop($classes); // get the last Class
+      $reflection = new ReflectionClass($class);
+
+      $getterMethod = 'get'.$property;
+      return $reflection->hasMethod($getterMethod);
+      // @TODO: also check if in extraColumns...
     }
     else
     {
@@ -782,11 +837,23 @@ class sfDataSourcePropel extends sfDataSource
     $this->refresh();
   }
 
+  /**
+   * A protected method to store the results of the custom columns after the query has been executed
+   *
+   * @param string $key  the alias for the custom column
+   * @param mixed $value the resulted value to hold from the custom column
+   */
   protected function hold($key, $value)
   {
     $this->extraColumnsData[$key] = $value;
   }
 
+  /**
+   * A protected getter to retreive the data of the custom columns, after the query has been executed
+   *
+   * @param string $key the alias for the custom column
+   * @return mixed the value returned from the custom column query
+   */
   protected function fetch($key)
   {
     return $this->extraColumnsData[$key];
