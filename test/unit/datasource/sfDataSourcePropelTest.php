@@ -14,6 +14,13 @@ require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 //add propel to include-path
 set_include_path($_SERVER['SYMFONY'].'/plugins/sfPropelPlugin/lib/vendor'.PATH_SEPARATOR.SF_ROOT_DIR.PATH_SEPARATOR.get_include_path());
 
+// initialize Doctrine
+$autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_doctrine_%s.data', md5(__FILE__)));
+$autoload->addDirectory(realpath($_SERVER['SYMFONY'].'/plugins/sfDoctrinePlugin/lib'));
+$autoload->register();
+
+require_once(dirname(__FILE__).'/fixtures/Person.class.php');
+
 function iterator_to_field_array($iterator, $field)
 {
   $values = array();
@@ -49,7 +56,7 @@ function iterator_names_to_field_array($iterator)
 class ProjectConfiguration extends sfProjectConfiguration {}
 
 
-$t = new lime_test(40, new lime_output_color());
+$t = new lime_test(51, new lime_output_color());
 
 
 // initialize Propel
@@ -281,6 +288,55 @@ $t->is(iterator_names_to_field_array($s), $originalValues, '->setSort() sorts co
 
 // static methods
 $t->diag('testing static methods');
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.Child.ChildChild'), 'addBase', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1.ChildChild'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves first add Method for objectPath');
+
+$t->is(sfDataSourcePropel::resolveBaseClass('Base.Child.ChildChild'), 'Base', 'resolveBaseClass resolves first class from objectPath');
+
+$t->is(sfDataSourcePropel::resolveClassNameFromObjectPath('Base'), 'Base', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
+$t->is(sfDataSourcePropel::resolveClassNameFromObjectPath('Base.Child.ChildChild'), 'ChildChild', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
+
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.Child.ChildChild'), 'addBase', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
+$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1.ChildChild'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
+
+try
+{
+  sfDataSourcePropel::checkObjectPath('PersonPropel');
+  $t->pass('checkObjectPath OK with valid Path');
+}
+catch (Exception $e)
+{
+  $t->fail('checkObjectPath PL with valid Path');
+}
+
+try
+{
+  sfDataSourcePropel::checkObjectPath('Base.Child.ChildChild');
+  $t->fail('checkObjectPath throws an UnexpectedValueException with invalid Path');
+}
+catch (UnexpectedValueException $e)
+{
+  $t->pass('checkObjectPath throws an UnexpectedValueException with invalid Path');
+}
+
+try
+{
+  sfDataSourcePropel::checkObjectPath('Person');
+  $t->fail('checkObjectPath throws an LogicException with invalid Class ');
+}
+catch (LogicException $e)
+{
+  $t->pass('checkObjectPath throws an LogicException with invalid Class');
+}
+
+
+$classes = array();
+$classes = sfDataSourcePropel::resolveAllClasses('Base');
+$t->is(count($classes), 1, 'resolveAllClasses returns one class for "Base"');
+$classAliasses = array_keys($classes);
+$t->is($classAliasses[0], 'Base', 'resolveAllClasses returns alias "Base"');
+
+$classes = sfDataSourcePropel::resolveAllClasses('Base.Child.ChildChild', $classes);
+$t->is(count($classes), 3, 'resolveAllClasses correctly adds two classes');
+$base = $classes['Base'];
+$t->is(count($base['relatedTo']), 1, '"Base" correctly gets related to one child class');
+$t->is($base['relatedTo'][0], 'Child', 'child class is "Child"');
