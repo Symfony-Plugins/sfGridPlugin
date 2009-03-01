@@ -3,8 +3,6 @@
 //require_once 'propel/engine/builder/om/php5/PHP5PeerBuilder.php';
 
 /*
- * This file is part of the symfony package.
- * (c) 2004-2006 Fabien Potencier <fabien.potencier@symfony-project.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -13,15 +11,15 @@
 /**
  * @package    symfony
  * @subpackage propel
- * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
- * @version    SVN: $Id: SfPeerBuilder.php 14378 2008-12-29 20:04:39Z Kris.Wallsmith $
+ * @author     Leon van der Ree <leon@fun4me.demon.nl>
+ * @version    SVN: $Id: SfPeerBuilder.php
  */
 class SfPeerBuilderDS extends SfPeerBuilder
 {
   protected function addSelectMethods(&$script)
   {
     $this->addAddSelectColumnsAliased($script);
-  	
+
     parent::addSelectMethods($script);
   }
 
@@ -57,6 +55,6 @@ class SfPeerBuilderDS extends SfPeerBuilder
     $script .="
   }
 ";
-  } // addAddSelectColumnsAliased()  
+  } // addAddSelectColumnsAliased()
 
 }
