@@ -140,12 +140,15 @@ class SfObjectBuilderDS extends SfObjectBuilder
   public function hydrateCustomColumns(\$row, \$startcol, Criteria \$criteria)
   {
     \$attributeNames = array_merge(\$criteria->getSelectColumns(), array_keys(\$criteria->getAsColumns()));
-    
-    //replace dots with underscores
-    \$attributeName = str_replace('.', '_', \$attributeNames[\$startcol]);
-    
-    // dynamically add attributes
-    \$this->setCustomColumnValue(\$attributeName, \$row[\$startcol]);
+
+    for (\$i=\$startcol; \$i<count(\$attributeNames); \$i++)
+    {
+      //replace dots with underscores
+      \$attributeName = str_replace('.', '_', \$attributeNames[\$i]);
+      
+      // dynamically add attributes
+      \$this->setCustomColumnValue(\$attributeName, \$row[\$i]);
+    }    
   }  
 ";
   }
