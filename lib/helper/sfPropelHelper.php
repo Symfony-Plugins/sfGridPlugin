@@ -438,10 +438,7 @@ function loadData($criteria = null, $objectPaths, $extraColumns = array(), $conn
       $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
     }
 
-    foreach ($extraColumns as $extraColumn)
-    {
-      $instance->setCustomColumnValue($extraColumn, $row[$startcol++]);
-    }
+    $instance->hydrateCustomColumns($row, $startcol, $criteria);
 
     $data[] = $instance;
   }

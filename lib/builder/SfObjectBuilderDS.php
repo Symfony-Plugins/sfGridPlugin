@@ -23,7 +23,9 @@ class SfObjectBuilderDS extends SfObjectBuilder
     $this->addCustomColumnCheckerMethod($script);
     $this->addCustomColumnAccessorMethod($script);
     $this->addCustomColumnMutatorMethod($script);
+    $this->addCustomColumnHydationMethod($script);
 
+    $this->addCustomColumnAccessorGetMethod($script);
   }
 
 
@@ -93,4 +95,59 @@ class SfObjectBuilderDS extends SfObjectBuilder
   }
 ';
   }
+  
+  protected function addCustomColumnAccessorGetMethod(&$script)
+  {
+    $originalHead = "public function __call(\$method, \$arguments)
+  {";
+    
+    $extraBody = "
+  public function __call(\$method, \$arguments)
+  {
+    //automatically define getters for new Attributes
+    if (strpos(\$method, 'get') === 0)
+    {
+      \$attribute = substr(\$method,3);
+      
+      if (\$this->hasCustomColumn(\$attribute))
+      {
+        return \$this->getCustomColumnValue(\$attribute);
+      }
+    }
+    
+    ";
+    
+    // add extra check for Getters
+    $script = str_replace($originalHead, $extraBody, $script);
+  }
+  
+
+  protected function addCustomColumnHydationMethod(&$script)
+  {
+    $script .= "
+  /**
+   * Hydrates (populates) the custom columns with (lef over) values from the database resultset.
+   *
+   * An offset (0-based \"start column\") is specified so that objects can be hydrated
+   * with a subset of the columns in the resultset rows.  This is needed, since the previous
+   * rows are from the already hydrated objects. 
+   *
+   * @param      array \$row The row returned by PDOStatement->fetch(PDO::FETCH_NUM)
+   * @param      int \$startcol 0-based offset column which indicates which restultset column to start with.
+   * @param      Criteria \$criteria
+   * @throws     PropelException  - Any caught Exception will be rewrapped as a PropelException.
+   */
+  public function hydrateCustomColumns(\$row, \$startcol, Criteria \$criteria)
+  {
+    \$attributeNames = array_merge(\$criteria->getSelectColumns(), array_keys(\$criteria->getAsColumns()));
+    
+    //replace dots with underscores
+    \$attributeName = str_replace('.', '_', \$attributeNames[\$startcol]);
+    
+    // dynamically add attributes
+    \$this->setCustomColumnValue(\$attributeName, \$row[\$startcol]);
+  }  
+";
+  }
+    
 }

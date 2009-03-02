@@ -200,7 +200,7 @@ class sfDataSourcePropel extends sfDataSource
       throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
     }
   }
-
+  
   /**
    * Returns whether the data has already been loaded from the database.
    *
@@ -530,6 +530,30 @@ class sfDataSourcePropel extends sfDataSource
 
     $this->refresh();
   }
+
+//  /**
+//   * @see sfDataSourceInterface
+//   */  
+//  public function setFilter($columns)
+//  {
+//    $this->selectCriteria = new Criteria();
+//    
+//    foreach ($columns as $columnName => $column)
+//    {
+//      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropel'));
+//      $columnName = translatePropertyPathToAliasedColumn($this->baseClass.'.'.$columnName);
+//      
+//      if (!isset($column['value']))
+//      {
+//        throw new Exception("key 'value' not set for column ".$columnName); 
+//      }
+//      
+//      $value = $column['value'];
+//      $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
+//      
+//      $this->selectCriteria->add($columnName, $value, $operator);
+//    }
+//  }
 
 
 }

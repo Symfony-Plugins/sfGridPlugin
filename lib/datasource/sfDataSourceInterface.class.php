@@ -65,6 +65,30 @@ interface sfDataSourceInterface extends SeekableIterator, ArrayAccess, Countable
   const ASC  = 'asc';
   const DESC = 'desc';
   
+  /** Comparison type. */
+  const EQUAL = "=";
+
+  /** Comparison type. */
+  const NOT_EQUAL = "<>";
+
+  /** Comparison type. */
+  const GREATER_THAN = ">";
+
+  /** Comparison type. */
+  const LESS_THAN = "<";
+
+  /** Comparison type. */
+  const GREATER_EQUAL = ">=";
+
+  /** Comparison type. */
+  const LESS_EQUAL = "<=";
+
+  /** Comparison type. */
+  const LIKE = " LIKE ";
+
+  /** Comparison type. */
+  const NOT_LIKE = " NOT LIKE ";
+  
   /**
    * Sorts the data source by the given column in the given order.
    * 
@@ -73,6 +97,14 @@ interface sfDataSourceInterface extends SeekableIterator, ArrayAccess, Countable
    *                        sfDataSourceInterface::ASC and sfDataSourceInterface::DESC
    */
   public function setSort($column, $order = sfDataSourceInterface::ASC);
+  
+  /**
+   * An associative array of column-names with an associative array of 
+   * array('value' => $value, 'operator' => $operator) pairs
+   *
+   * @param array[array[string, string]] $columns
+   */
+//  public function setFilter($columns);
   
   /**
    * Sets the number of rows to skip in the beginning of the data source when
