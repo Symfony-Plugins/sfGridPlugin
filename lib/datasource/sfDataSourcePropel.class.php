@@ -12,19 +12,10 @@
  * This class implements the interface sfDataSourceInterface for accessing
  * data stored in Propel tables.
  *
- * You can either pass a model name, to make use of the peer::doSelect* and doCount* methods
- * or provide a custom select- and count-Criteria object to the constructor.
- *
- * TODO: Additionally you can define doSelect*Sort methods
- *
  * <code>
  * // fetches all user objects
  * $source = new sfDataSourcePropel('User');
  * // this will return a hydrated iterator with User Objects (using doSelect)
- *
- * // fetches all users and hydrates all related classes, with the doSelectJoinAll method
- * $source = new sfDataSourcePropel('User', 'JoinAll', new Criteria());
- * // this will return a hydrated iterator with the use of the doSelectJoinAll peer method
  *
  * // fetches user objects from Criteria
  * $selectCriteria = new Criteria();
@@ -33,7 +24,7 @@
  *
  * $source = new sfDataSourcePropel($selectCriteria, $countCriteria);
  * // this source will contain non-hydrated resultsets,
- * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
+ * // PropertyPath must be tablename.COLUMNNAME syntax (from propel)
  *
  * </code>
  *
@@ -90,14 +81,6 @@ class sfDataSourcePropel extends sfDataSource
   protected $baseClass = null;
 
   /**
-   * The name of the doSelect and doCount methods to use
-   * By default it will be doSelect and doCount, you can define the suffix here
-   *
-   * @var string
-   */
-  protected $peerMethod = null;
-
-  /**
    * Enter description here...
    *
    * @var Criteria
@@ -113,21 +96,15 @@ class sfDataSourcePropel extends sfDataSource
   /**
    * Constructor.
    *
-   * The data source can be constructed from className (with Peer method name)
-   * or a custom Criteria object. Custom criteria objects will not get hydrated,
-   * it is expected the Peer methods are, although the implementation can
-   * be customised by you!
+   * The data source can be constructed from className
+   * or a custom Criteria object. Custom criteria objects will not get hydrated.
    *
    * the Criteria object will be cloned, since it will be modified internally.
    *
    * <code>
    * // fetches all user objects
    * $source = new sfDataSourcePropel('User');
-   * // this will return a hydrated iterator with User Objects (using doSelect)
-   *
-   * // fetches all users and hydrates all related classes, with the doSelectJoinAll method
-   * $source = new sfDataSourcePropel('User', 'JoinAll', new Criteria());
-   * // this will return a hydrated iterator with the use of the doSelectJoinAll peer method
+   * // this will return a hydrated iterator with User Objects//TODO: better than this, auto joins
    *
    * // fetches user objects from Criteria
    * $selectCriteria = new Criteria();
@@ -136,48 +113,36 @@ class sfDataSourcePropel extends sfDataSource
    *
    * $source = new sfDataSourcePropel($selectCriteria, $countCriteria);
    * // this source will contain non-hydrated resultsets,
-   * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
+   * // propertyPath must be tablename.COLUMNNAME syntax (from propel)
    * </code>
    *
    * @param  mixed $classNameOrSelectCriteria        The data source (a select Criteria, or an
    *                                                 (array of) object Path(s)
-   * @param  mixed $peerDoMethodNameOrCountCriteria  The count Criteria, required when providing
-   *                                                  a Criteria object as source.
-   * @param Criteria $criteria                        additional criteria (only when using the Peer-methods)
+   * @param Criteria $criteriaOrCountCriteria        initial criteria (obitional) or requered CountCriteria 
+   *                                                 depending on className or Select Criteria
    *
-   * @throws UnexpectedValueException  Throws an exception class of peer method do not exist
+   * @throws UnexpectedValueException  Throws an exception if the class does not exist
    *                                   or if the select source is a Criteria, but a count Criteria is missing
    * @throws InvalidArgumentException  Throws an exception if the source is
    *                                   neither a valid propel model class name
    *                                   nor a Criteria.
    */
-  public function __construct($classNameOrSelectCriteria, $peerDoMethodNameOrCountCriteria = null, Criteria $criteria = null)
+  public function __construct($classNameOrSelectCriteria, Criteria $criteriaOrCountCriteria = null)
   {
     // if the source is provided as object paths, create hydratable criteria
     if (is_string($classNameOrSelectCriteria))
     {
       $this->baseClass = $classNameOrSelectCriteria;
-      $peerClass = constant($this->baseClass.'::PEER');
-      $this->peerMethod = $peerDoMethodNameOrCountCriteria;
 
-      // check if Class and PeerMethods exist
+      // check if Class exist
       if (!class_exists($this->baseClass))
       {
         throw new UnexpectedValueException(sprintf('Class "%s" does not exist', $this->baseClass));
       }
-      if (!method_exists($peerClass, 'doSelect'.$this->peerMethod))
+      
+      if ($criteriaOrCountCriteria != null)
       {
-        throw new UnexpectedValueException(sprintf('Class "%s" does not contain method "%s"', $peerClass, 'doSelect'.$this->peerMethod));
-      }
-      if (!method_exists($peerClass, 'doCount'.$this->peerMethod))
-      {
-        throw new UnexpectedValueException(sprintf('Class "%s" does not contain method "%s"', $peerClass, 'doCount'.$this->peerMethod));
-      }
-
-
-      if ($criteria != null)
-      {
-        $this->selectCriteria = clone $criteria;
+        $this->selectCriteria = clone $criteriaOrCountCriteria;
       }
       else
       {
@@ -189,11 +154,11 @@ class sfDataSourcePropel extends sfDataSource
     {
       if (!$countCriteria instanceof Criteria)
       {
-        throw new UnexpectedValueException(sprintf('The countCriteria argument is required when providing a Criteria object as source. The countCriteria is not a Criteria based class'));
+        throw new UnexpectedValueException(sprintf('The CountCriteria argument is required when providing a Criteria object as source. The provided $criteriaOrCountCriteria argument is not an instance of Criteria'));
       }
 
       $this->selectCriteria = clone $classNameOrSelectCriteria;
-      $this->countCriteria = clone $peerDoMethodNameOrCountCriteria;
+      $this->countCriteria = clone $criteriaOrCountCriteria;
     }
     else
     {
@@ -224,9 +189,9 @@ class sfDataSourcePropel extends sfDataSource
     // hydrate objects in case object paths have been defined
     if ($this->baseClass != null)
     {
-      $basePeer = constant($this->baseClass.'::PEER');
+//      $basePeer = constant($this->baseClass.'::PEER');
 
-      $this->data = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod), array($this->selectCriteria, $this->connection));
+//      $this->data = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod), array($this->selectCriteria, $this->connection));
     }
     // or return raw result sets in case custom criteria objects have been provided
     else
@@ -281,7 +246,7 @@ class sfDataSourcePropel extends sfDataSource
 
 //      //TODO: implement these in peer
 //      $basePeer = constant($this->baseClass.'::PEER');
-//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'GetValue'), array($column));
+//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'GetValue'), array($propertyPath));
 
       // TODO: check for object property or custom column, see below
       $getters = $field.'.';
@@ -298,7 +263,7 @@ class sfDataSourcePropel extends sfDataSource
           return null;
         }
       }
-      //TODO: custom column, this should be done with the help of a peer-method, that uses the sfPropelHelper, which is aware of the getCustomColumnValue method!
+      //TODO: custom column, this should be done with the help of a peer-method, that uses the sfPropelPropertyPathHelper, which is aware of the getCustomColumnValue method!
       //return $result->getCustomColumnValue($field);
       // Peer::doSelectJoinGetColumValue($current, $field)
     }
@@ -366,9 +331,10 @@ class sfDataSourcePropel extends sfDataSource
     // in case we are using a peer class
     if ($this->baseClass != null)
     {
-      $basePeer = constant($this->baseClass.'::PEER');
+//      $basePeer = constant($this->baseClass.'::PEER');
 
-      $count = call_user_func_array(array($basePeer, 'doCount'.$this->peerMethod), array($this->selectCriteria, $this->connection));
+        $count = 0; // TODO: use sfPropelPropertyPathHelper
+//      $count = call_user_func_array(array($basePeer, 'doCount'.$this->peerMethod), array($this->selectCriteria, $this->connection));
     }
     // or in case we are using custom criteria objects for select and count
     else
@@ -401,19 +367,19 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
-   * @see sfDataSourceInterface::hasColumn()
+   * @see sfDataSourceInterface::addPropertyPath()
    */
-  public function hasColumn($column)
+  public function addPropertyPath($propertyPath)
   {
     if ($this->baseClass != null)
     {
       //TODO: add check if method_exists
 //      $basePeer = constant($this->baseClass.'::PEER');
-//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'HasColum'), array($column));
+//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'HasColum'), array($propertyPath));
       // else:
 
       // @TODO: also check if in extraColumns... in which case, it won't belong to the baseClass...
-      $propertyPath = $this->baseClass . '.' . $column;
+      $propertyPath = $this->baseClass . '.' . $propertyPath;
 
       //TODO: this should be done by a peer-method
       try
@@ -431,7 +397,7 @@ class sfDataSourcePropel extends sfDataSource
     }
     else
     {
-      return in_array($column, $this->selectCriteria->getSelectColumns());
+      return in_array($propertyPath, $this->selectCriteria->getSelectColumns());
     }
   }
 
@@ -476,39 +442,39 @@ class sfDataSourcePropel extends sfDataSource
   /**
    * @see sfDataSource::doSort()
    */
-  protected function doSort($column, $order)
+  protected function doSort($propertyPath, $order)
   {
     $sortByPeer = false;
 
-    // translate $column to propel column-name
+    // translate $propertyPath to propel column-name
     if ($this->baseClass != null)
     {
       // check if a DoSelect*Sort method has been defined, that contains the sort intelegence
-      $peerClass = constant($this->baseClass.'::PEER');
-      if (method_exists($peerClass, 'doSelect'.$this->peerMethod.'Sort'))
-      {
-        $sortByPeer = true;
-
-        $basePeer = constant($this->baseClass.'::PEER');
-        $this->selectCriteria = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'Sort'), array($this->selectCriteria, $column, $order));
-      }
-      else
-      {
+//      $peerClass = constant($this->baseClass.'::PEER');
+//      if (method_exists($peerClass, 'doSelect'.$this->peerMethod.'Sort'))
+//      {
+//        $sortByPeer = true;
+//
+//        $basePeer = constant($this->baseClass.'::PEER');
+//        $this->selectCriteria = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'Sort'), array($this->selectCriteria, $propertyPath, $order));
+//      }
+//      else
+//      {
         //this is the simple implementation, since table aliasses cannot be automatically be resolved with custom peer methods
         //current column
-        if (strpos($column, '.')===false)
+        if (strpos($propertyPath, '.')===false)
         {
           $tableName = constant($this->baseClass.'Peer::TABLE_NAME');
-          $fieldName = $column;
+          $fieldName = $propertyPath;
         }
         // or (directly)related column
         else
         {
-          list($relatedClass, $fieldName) = explode('.',$column, 2);
+          list($relatedClass, $fieldName) = explode('.',$propertyPath, 2);
           $tableName = constant($relatedClass.'Peer::TABLE_NAME');
         }
-        $column =  $tableName.'.'.$fieldName;
-      }
+        $propertyPath =  $tableName.'.'.$fieldName;
+//      }
     }
 
     if (!$sortByPeer)
@@ -518,10 +484,10 @@ class sfDataSourcePropel extends sfDataSource
       switch ($order)
       {
         case sfDataSourceInterface::ASC:
-          $this->selectCriteria->addAscendingOrderByColumn($column);
+          $this->selectCriteria->addAscendingOrderByColumn($propertyPath);
           break;
         case sfDataSourceInterface::DESC:
-          $this->selectCriteria->addDescendingOrderByColumn($column);
+          $this->selectCriteria->addDescendingOrderByColumn($propertyPath);
           break;
         default:
           throw new Exception('sfDataSourcePropel::doSort() only accepts "'.sfDataSourceInterface::ASC.'" or "'.sfDataSourceInterface::DESC.'" as argument');

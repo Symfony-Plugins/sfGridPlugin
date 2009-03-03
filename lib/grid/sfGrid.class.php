@@ -108,7 +108,7 @@ class sfGrid implements Countable
       {
         throw new InvalidArgumentException('The column names must be strings');
       }
-      if (!$this->getDataSource()->hasColumn($column))
+      if (!$this->getDataSource()->addPropertyPath($column))
       {
         throw new LogicException(sprintf('The column "%s" does not exist in the data source', $column));
       }
@@ -330,7 +330,7 @@ class sfGrid implements Countable
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfGrid::ASC or sfGrid::DESC', $order));
     }
 
-    if (!$this->getDataSource()->hasColumn($column))
+    if (!$this->getDataSource()->addPropertyPath($column))
     {
       throw new LogicException(sprintf('The column "%s" has not been configured', $column));
     }

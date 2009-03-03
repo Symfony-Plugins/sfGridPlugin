@@ -156,5 +156,5 @@ interface sfDataSourceInterface extends SeekableIterator, ArrayAccess, Countable
    * @param  string $column  The column name to check for
    * @return boolean         Whether the column name exists
    */
-  public function hasColumn($column);
+  public function addPropertyPath($propertyPath);
 }

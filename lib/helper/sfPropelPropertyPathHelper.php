@@ -201,57 +201,8 @@ function resolveBaseClass($objectPath)
   return $classReferences[0];
 }
 
-/**
- * Constructor.
- *
- * The data source can be given as an (array of) objectPaths, or a custom
- * Criteria object. Custom criteria objects will not get hydrated, objects
- * names are!
- * the Criteria object will be cloned, since it will be modified internally.
- *
- * In the future the objectPaths can become optional, since these can be resolved
- * lazy from the property paths of a grid->setColumns(...)
- *
- * <code>
- * // fetches all user objects, and their related userProfiles from objectPath
- * $source = new sfDataSourcePropel('User', 'User.UserProfile');
- * // exactly the same:
- * $source = new sfDataSourcePropel(array('User.UserProfile'));
- * // since array is optional, and 'User' is resolved from 'User.UserProfile'
- * // this source->current() will return a hydrated object of the base object (User)
- *
- * // fetches user objects from Criteria
- * $criteria = new Criteria();
- * UserPeer::addSelectColumns($criteria);
- * // you can add more related / custom columns here
- *
- * $countCriteria = new Criteria();
- * $countCriteria->setPrimaryTableName(UserPeer::TABLE_NAME);
- *
- * $source = new sfDataSourcePropel($criteria, $countCriteria);
- * // this source will contain non-hydrated resultsets,
- * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
- * </code>
- *
- * @param Criteria $criteria         The Criteria Object to add the selected-columns and joins to
- * @param array $objectPaths         The data source (a select Criteria, or an
- *                                   (array of) object Path(s)
- * @param bool $withColumns          add Select Columns to the criteria (usefull to disable for counts, where you only want joins)
- *
- * @return Criteria                  The criteria object, with the added selected-columns and joins
- *
- * @throws LogicException            Throws an exception if the source is a
- *                                   string, but not an existing Propel class name
- * @throws UnexpectedValueException  Throws an exception if the select source is
- *                                   a Criteria, but is missing a count Criteria
- * @throws InvalidArgumentException  Throws an exception if the source is
- *                                   neither a valid propel model class name
- *                                   nor a Criteria.
- */
-function addJoins($criteria = null, $objectPaths, $withColumns = true)
+function addTableAliasses(&$criteria = null, $objectPaths)
 {
-  $criteria = clone $criteria;
-
   // if the source is provided as object paths, create hydratable criteria
   if (!is_array($objectPaths))
   {
@@ -349,6 +300,154 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
 }
 
 /**
+ * addJoins.
+ *
+ * The data source can be given as an (array of) objectPaths, or a custom
+ * Criteria object. Custom criteria objects will not get hydrated, objects
+ * names are!
+ * the Criteria object will be cloned, since it will be modified internally.
+ *
+ * In the future the objectPaths can become optional, since these can be resolved
+ * lazy from the property paths of a grid->setColumns(...)
+ *
+ * <code>
+ * // fetches all user objects, and their related userProfiles from objectPath
+ * $source = new sfDataSourcePropel('User', 'User.UserProfile');
+ * // exactly the same:
+ * $source = new sfDataSourcePropel(array('User.UserProfile'));
+ * // since array is optional, and 'User' is resolved from 'User.UserProfile'
+ * // this source->current() will return a hydrated object of the base object (User)
+ *
+ * // fetches user objects from Criteria
+ * $criteria = new Criteria();
+ * UserPeer::addSelectColumns($criteria);
+ * // you can add more related / custom columns here
+ *
+ * $countCriteria = new Criteria();
+ * $countCriteria->setPrimaryTableName(UserPeer::TABLE_NAME);
+ *
+ * $source = new sfDataSourcePropel($criteria, $countCriteria);
+ * // this source will contain non-hydrated resultsets,
+ * // hasColumn will only accept the tablename.COLUMNNAME syntax (from propel)
+ * </code>
+ *
+ * @param Criteria $criteria         The Criteria Object to add the selected-columns and joins to
+ * @param array $objectPaths         The data source (a select Criteria, or an
+ *                                   (array of) object Path(s)
+ * @param bool $withColumns          add Select Columns to the criteria (usefull to disable for counts, where you only want joins)
+ *
+ * @return Criteria                  The criteria object, with the added selected-columns and joins
+ *
+ * @throws LogicException            Throws an exception if the source is a
+ *                                   string, but not an existing Propel class name
+ * @throws UnexpectedValueException  Throws an exception if the select source is
+ *                                   a Criteria, but is missing a count Criteria
+ * @throws InvalidArgumentException  Throws an exception if the source is
+ *                                   neither a valid propel model class name
+ *                                   nor a Criteria.
+ */
+function addJoins($criteria = null, $objectPaths, $withColumns = true)
+{
+  $criteria = clone $criteria;
+
+  // if the source is provided as object paths, create hydratable criteria
+  if (!is_array($objectPaths))
+  {
+    throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
+  }
+
+  // generate an array of classes to be retrieved from DB
+  $classes = array();
+  $baseClass = resolveBaseClass($objectPaths[0]);
+  $basePeer = constant($baseClass.'::PEER');
+
+  foreach ($objectPaths as $objectPath)
+  {
+    // validation checks @todo: this can be skipped in production
+    // test if there is only one base class
+    if ($baseClass != ($currentBaseClass = resolveBaseClass($objectPath)))
+    {
+      throw new LogicException(sprintf('Not all base classes are the same.
+                                        Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
+    }
+    // test if relations are valid
+    checkObjectPath($objectPath);
+
+    // get flat array of classes that need to get hydrated
+    $classes =  resolveAllClasses($objectPath, $classes);
+  }
+
+  // construct full hydration-profile
+  $criteria->setDbName(constant($basePeer.'::DATABASE_NAME'));
+
+  // process all classes
+  foreach ($classes as $alias => &$class)
+  {
+    // TODO: should I start with the base $class??? in that case do it before the foreach and skip base in foreach
+    $peer = constant($class['className'].'::PEER');
+
+    //add alias for tables
+    $criteria->addAlias($alias, constant($peer.'::TABLE_NAME'));
+
+    //addSelectColumns
+    if ($withColumns)
+    {
+      call_user_func_array(array($peer, 'addSelectColumnsAliased'), array($criteria, $alias));
+      call_user_func_array(array($peer, 'addCustomColumnsAliased'), array($criteria, $alias));
+    }
+
+    // get TableMap for base
+    $baseTM = call_user_func_array(array($peer, 'getTableMap'), array());
+
+    //join related
+    foreach ($class['relatedTo'] as $relatedTo)
+    {
+      $relatedAlias = $alias.'_'.$relatedTo;
+      $relatedPeer = constant($classes[$relatedAlias]['className'].'::PEER');
+      // get TableMap for related
+      $relatedTM = call_user_func_array(array($relatedPeer, 'getTableMap'), array());
+
+      $relatedPKs = $relatedTM->getPrimaryKeyColumns();
+      // only support for one Primary Key
+      $relatedPKName = $relatedPKs[0]->getColumnName();
+
+      // search for relation (BaseTable-ForeignKey / ForeignTable-PrimaryKey)
+      $RelatedByArr = explode('RelatedBy', $relatedTo, 2);
+      foreach ($baseTM->getColumns() as $relatedColumn)
+      {
+        $baseFKName = 'ID'; // @todo: hack to make sfGuardUserProfile to work, for now (since this one cannot be resolved)
+        if (count($RelatedByArr)==1)
+        {
+          $colRelTableName = $relatedColumn->getRelatedTableName();
+          if ((!empty($colRelTableName)) && ($baseTM->getDatabaseMap()->containsTable($colRelTableName)) && ($baseTM->getDatabaseMap()->getTable($colRelTableName)->getPhpName() == $RelatedByArr[0]))
+          {
+            $baseFKName = $relatedColumn->getName();
+            break;
+          }
+          //TODO: reverse lookup (per table) to fix hack from above...
+        }
+        else
+        {
+          if ($relatedColumn->getPhpName() == $RelatedByArr[1])
+          {
+            $baseFKName = $relatedColumn->getName();
+            break;
+          }
+        }
+      }
+
+      $joinColumnLeft  = call_user_func_array(array($peer, 'alias'), array($alias, constant($peer.'::'.$baseFKName)));
+      $joinColumnRight = call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, constant($relatedPeer.'::'.$relatedPKName)));
+      $joinType = Criteria::LEFT_JOIN; //TODO: add lookup table that can define the joinType
+
+      $criteria->addJoin($joinColumnLeft, $joinColumnRight, $joinType);
+    }
+  }
+
+  return $criteria;
+}
+
+/**
  * private method to load the Data,
  *
  * the functionality depends on the constructor call (have custom Criteria been provided, or is hydration of objects possible)
@@ -362,7 +461,7 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
  * @param array $extraColumns
  * @param unknown_type $connection
  */
-function loadData($criteria = null, $objectPaths, $extraColumns = array(), $connection = null)
+function loadData($criteria = null, $objectPaths, $connection = null)
 {
   // data holds all main results
   $data = array();

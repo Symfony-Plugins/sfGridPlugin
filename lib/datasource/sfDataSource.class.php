@@ -51,7 +51,7 @@ abstract class sfDataSource implements sfDataSourceInterface
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfDataSourceInterface::ASC or sfDataSourceInterface::DESC', $order));
     }
 
-    if (!$this->hasColumn($column))
+    if (!$this->addPropertyPath($column))
     {
       throw new LogicException(sprintf('The column "%s" does not exist', $column));
     }
@@ -95,7 +95,7 @@ abstract class sfDataSource implements sfDataSourceInterface
       throw new OutOfBoundsException(sprintf('The result with index "%s" does not exist', $this->cursor));
     }
 
-    return $this->hasColumn($column);
+    return $this->addPropertyPath($column);
   }
 
   /**
