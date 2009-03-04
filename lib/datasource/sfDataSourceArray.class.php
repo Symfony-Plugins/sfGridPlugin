@@ -11,34 +11,34 @@
 /**
  * This class implements the interface sfDataSourceInterface for accessing
  * data stored in arrays.
- * 
+ *
  * You can use this class if you want to pass an array to a method that requires
  * instances of sfDataSourceInterface. All you need to do is passing the array
  * to the constructor of sfDataSourceArray.
- * 
+ *
  * <code>
  * $source = new sfDataSourceArray($array);
  * </code>
- * 
+ *
  * It is important that the given array is formatted correctly. The array
  * must be two dimensional (an array of arrays), where the subordinate arrays
  * represent data rows. All subordinate arrays must have the same length and
  * the same key names, otherwise an exception will be thrown.
- * 
+ *
  * <code>
  * // valid array
  * $array = new array(
  *   array('id' => 1, 'name' => 'Fabien'),
  *   array('id' => 2, 'name' => 'Kris'),
  * );
- * 
+ *
  * // invalid array
  * $array = new array(
  *   array('id' => 1, 'name' => 'Fabien'),
  *   array(0 => 2, 'name' => 'Kris'),
  * );
  * </code>
- * 
+ *
  * @package    symfony
  * @subpackage grid
  * @author     Bernhard Schussek <bschussek@gmail.com>
@@ -48,32 +48,32 @@ class sfDataSourceArray extends sfDataSource
 {
   protected
     $data = array();
-    
+
   private
     $sortColumn = null,
     $sortOrder = null;
-    
+
   /**
    * Constructor.
-   * 
-   * The given data must be a two dimensional array (an array of arrays), where 
-   * the subordinate arrays represent data rows. All subordinate arrays must have 
+   *
+   * The given data must be a two dimensional array (an array of arrays), where
+   * the subordinate arrays represent data rows. All subordinate arrays must have
    * the same length and the same key names, otherwise an exception will be thrown.
-   * 
+   *
    * <code>
    * // valid array
    * $array = new array(
    *   array('id' => 1, 'name' => 'Fabien'),
    *   array('id' => 2, 'name' => 'Kris'),
    * );
-   * 
+   *
    * // invalid array
    * $array = new array(
    *   array('id' => 1, 'name' => 'Fabien'),
    *   array(0 => 2, 'name' => 'Kris'),
    * );
    * </code>
-   * 
+   *
    * @param  array $data               An array of arrays containing the data
    * @throws InvalidArgumentException  Throws an exception if the given array
    *                                   is not formatted correctly
@@ -83,7 +83,7 @@ class sfDataSourceArray extends sfDataSource
     if (count($data) > 0)
     {
       $keys = array();
-      
+
       // compare the keys of the first row with those of all rows
       foreach ($data as $row)
       {
@@ -102,14 +102,14 @@ class sfDataSourceArray extends sfDataSource
         }
       }
     }
-    
+
     $this->data = $data;
   }
-  
+
   /**
    * Returns the current row while iterating. If the internal row pointer does
    * not point at a valid row, an exception is thrown.
-   * 
+   *
    * @return array                 The current row data
    * @throws OutOfBoundsException  Throws an exception if the internal row
    *                               pointer does not point at a valid row.
@@ -120,44 +120,44 @@ class sfDataSourceArray extends sfDataSource
     {
       throw new OutOfBoundsException(sprintf('The result with index %s does not exist', $this->key()));
     }
-    
+
     return $this->data[$this->key()+$this->getOffset()];
   }
-  
+
   /**
    * Returns the value of the given column in the current row returned by current()
-   * 
+   *
    * @param  string $column The name of the column
    * @return mixed          The value in the given column of the current row
    */
   public function offsetGet($column)
   {
     $row = $this->current();
-    
+
     return $row[$column];
   }
-  
+
   /**
    * Returns the number of records in the data source. If a limit is set with
    * setLimit(), the maximum return value is that limit. You can use the method
    * countAll() to count the total number of rows regardless of the limit.
-   * 
+   *
    * <code>
    * $source = new sfDataSourceArray($arrayWith100Items);
    * echo $source->count();    // returns "100"
    * $source->setLimit(20);
    * echo $source->count();    // returns "20"
    * </code>
-   * 
+   *
    * @return integer The number of rows
    */
   public function count()
   {
     $count = count($this->data) - $this->getOffset();
-    
+
     return $this->getLimit()==0 ? $count : min($this->getLimit(), $count);
   }
-  
+
   /**
    * @see sfDataSourceInterface::countAll()
    */
@@ -165,15 +165,18 @@ class sfDataSourceArray extends sfDataSource
   {
     return count($this->data);
   }
-  
+
   /**
-   * @see sfDataSourceInterface::hasColumn()
+   * @see sfDataSourceInterface::requireColumn()
    */
-  public function hasColumn($column)
+  public function requireColumn($column)
   {
-    return $this->count()>0 && array_key_exists($column, $this->data[0]);
+    if (!($this->count()>0 && array_key_exists($column, $this->data[0])))
+    {
+      throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
+    }
   }
-  
+
   /**
    * @see sfDataSource::doSort()
    */
@@ -181,14 +184,14 @@ class sfDataSourceArray extends sfDataSource
   {
     $this->sortColumn = $column;
     $this->sortOrder = $order;
-    
+
     usort($this->data, array($this, 'sortCallback'));
   }
-  
+
   /**
    * Callback method used by usort(). Compares two arrays by the current
    * sort column in the given sort order.
-   * 
+   *
    * @param  array $a The first array to compare
    * @param  array $b The second array to compare
    * @return integer  Less than zero if the first argument is less than the second,

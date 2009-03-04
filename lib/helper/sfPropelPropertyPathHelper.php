@@ -65,15 +65,36 @@ function resolveFirstAddMethodForObjectPath($objectPath)
  *
  * @param string $propertyPath, objectPath followed by a propertyName
  */
-function checkPropertyPath($propertyPath)
+function checkPropertyPath($baseClass, $propertyPath)
 {
-  $parts = explode('.', $propertyPath);
-  $property = array_pop($parts);
-  $objectPath = implode('.', $parts);
-
+  $objectPath = getObjectPathForProperyPath($baseClass, $propertyPath);
   checkObjectPath($objectPath);
 
-  //TODO: check property of last object in Path
+  //get property from propertyPath
+  $parts = explode('.', $propertyPath);
+  $property = array_pop($parts);
+
+  $lastObject = resolveClassNameFromObjectPath($objectPath);
+  $getterMethod = 'get'.$property;
+
+  if (!method_exists($lastObject, $getterMethod))
+  {
+    throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
+  }
+
+}
+
+function getObjectPathForProperyPath($baseClass, $propertyPath)
+{
+  //remove property from propertyPath
+  $parts = explode('.', $propertyPath);
+  $property = array_pop($parts);
+
+  // add baseClass to parts, before constructing objectPath
+  array_unshift($parts, $baseClass);
+  $objectPath = implode('.', $parts);
+
+  return $objectPath;
 }
 
 /**
@@ -87,7 +108,7 @@ function checkObjectPath($objectPath)
 {
   $classReferences = explode('.', $objectPath, 2);
 
-  // if not path was provided
+  // if path was not provided
   if (count ($classReferences) == 0)
   {
     throw new UnexpectedValueException('empty path was provided');
@@ -393,7 +414,7 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
     if ($withColumns)
     {
       call_user_func_array(array($peer, 'addSelectColumnsAliased'), array($criteria, $alias));
-      call_user_func_array(array($peer, 'addCustomColumnsAliased'), array($criteria, $alias));
+//      call_user_func_array(array($peer, 'addCustomColumnsAliased'), array($criteria, $alias));
     }
 
     // get TableMap for base
@@ -537,7 +558,7 @@ function loadData($criteria = null, $objectPaths, $connection = null)
       $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
     }
 
-    $instance->hydrateCustomColumns($row, $startcol, $criteria);
+//    $instance->hydrateCustomColumns($row, $startcol, $criteria);
 
     $data[] = $instance;
   }

@@ -151,10 +151,10 @@ interface sfDataSourceInterface extends SeekableIterator, ArrayAccess, Countable
   public function countAll();
 
   /**
-   * Returns whether the given column name exists in the data source.
+   * Returns whether the given column an be returned by the data source.
    *
    * @param  string $column  The column name to check for
-   * @return boolean         Whether the column name exists
+   * @throws LogicException  Throws an exception if the column cannot be returned by this dataset
    */
-  public function addPropertyPath($propertyPath);
+  public function requireColumn($column);
 }

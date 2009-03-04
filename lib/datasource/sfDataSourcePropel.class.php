@@ -24,7 +24,7 @@
  *
  * $source = new sfDataSourcePropel($selectCriteria, $countCriteria);
  * // this source will contain non-hydrated resultsets,
- * // PropertyPath must be tablename.COLUMNNAME syntax (from propel)
+ * // Column must be tablename.COLUMNNAME syntax (from propel)
  *
  * </code>
  *
@@ -81,6 +81,13 @@ class sfDataSourcePropel extends sfDataSource
   protected $baseClass = null;
 
   /**
+   * holder of all objectPaths
+   *
+   * @var array
+   */
+  protected $objectPaths = array();
+
+  /**
    * Enter description here...
    *
    * @var Criteria
@@ -118,7 +125,7 @@ class sfDataSourcePropel extends sfDataSource
    *
    * @param  mixed $classNameOrSelectCriteria        The data source (a select Criteria, or an
    *                                                 (array of) object Path(s)
-   * @param Criteria $criteriaOrCountCriteria        initial criteria (obitional) or requered CountCriteria 
+   * @param Criteria $criteriaOrCountCriteria        initial criteria (obitional) or requered CountCriteria
    *                                                 depending on className or Select Criteria
    *
    * @throws UnexpectedValueException  Throws an exception if the class does not exist
@@ -139,7 +146,10 @@ class sfDataSourcePropel extends sfDataSource
       {
         throw new UnexpectedValueException(sprintf('Class "%s" does not exist', $this->baseClass));
       }
-      
+
+      // add base class to array of Object Paths
+      $this->addObjectPath($this->baseClass);
+
       if ($criteriaOrCountCriteria != null)
       {
         $this->selectCriteria = clone $criteriaOrCountCriteria;
@@ -189,9 +199,15 @@ class sfDataSourcePropel extends sfDataSource
     // hydrate objects in case object paths have been defined
     if ($this->baseClass != null)
     {
-//      $basePeer = constant($this->baseClass.'::PEER');
+      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
-//      $this->data = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod), array($this->selectCriteria, $this->connection));
+      // we're going to modify criteria, so copy it first
+      $criteria = clone $this->selectCriteria;
+
+      $criteria = addJoins($criteria, $this->objectPaths);
+
+      $this->data = loadData($criteria, $this->objectPaths, $this->connection);
+
     }
     // or return raw result sets in case custom criteria objects have been provided
     else
@@ -246,7 +262,7 @@ class sfDataSourcePropel extends sfDataSource
 
 //      //TODO: implement these in peer
 //      $basePeer = constant($this->baseClass.'::PEER');
-//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'GetValue'), array($propertyPath));
+//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'GetValue'), array($column));
 
       // TODO: check for object property or custom column, see below
       $getters = $field.'.';
@@ -331,10 +347,52 @@ class sfDataSourcePropel extends sfDataSource
     // in case we are using a peer class
     if ($this->baseClass != null)
     {
-//      $basePeer = constant($this->baseClass.'::PEER');
+      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
-        $count = 0; // TODO: use sfPropelPropertyPathHelper
-//      $count = call_user_func_array(array($basePeer, 'doCount'.$this->peerMethod), array($this->selectCriteria, $this->connection));
+      // we're going to modify criteria, so copy it first
+      $basePeer = constant($this->baseClass.'::PEER');
+      $alias = $this->baseClass;
+
+      $criteria = clone $this->selectCriteria;
+
+      // We need to set the primary table name, since in the case that there are no WHERE columns
+      // it will be impossible for the BasePeer::createSelectSql() method to determine which
+      // tables go into the FROM clause.
+      $criteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME'));
+
+      $criteria->addAlias($alias, constant($basePeer.'::TABLE_NAME'));
+
+      if (!$criteria->hasSelectClause())
+      {
+        call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($criteria, $alias));
+      }
+
+      $criteria->setLimit(0);
+      $criteria->setOffset(0);
+      $criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
+
+      if ($this->connection === null)
+      {
+        $con = Propel::getConnection(constant($basePeer.'::DATABASE_NAME'), Propel::CONNECTION_READ);
+      }
+      else
+      {
+        $con = $this->connection;
+      }
+
+      $criteria = addJoins($criteria, $this->objectPaths, false);
+
+      $stmt = BasePeer::doCount($criteria, $con);
+      if ($row = $stmt->fetch(PDO::FETCH_NUM))
+      {
+        $count = (int) $row[0];
+      }
+      else
+      {
+        $count = 0; // no rows returned; we infer that means 0 matches.
+      }
+      $stmt->closeCursor();
+
     }
     // or in case we are using custom criteria objects for select and count
     else
@@ -366,38 +424,36 @@ class sfDataSourcePropel extends sfDataSource
     return $count;
   }
 
+  public function addObjectPath($objectPath)
+  {
+    if (!in_array($objectPath, $this->objectPaths))
+    {
+      $this->objectPaths[] = $objectPath;
+    }
+  }
+
   /**
    * @see sfDataSourceInterface::addPropertyPath()
    */
-  public function addPropertyPath($propertyPath)
+  public function requireColumn($column)
   {
     if ($this->baseClass != null)
     {
-      //TODO: add check if method_exists
-//      $basePeer = constant($this->baseClass.'::PEER');
-//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'HasColum'), array($propertyPath));
-      // else:
+      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
-      // @TODO: also check if in extraColumns... in which case, it won't belong to the baseClass...
-      $propertyPath = $this->baseClass . '.' . $propertyPath;
+      // throws an exception if the property cannot be resolved
+      checkPropertyPath($this->baseClass , $column);
 
-      //TODO: this should be done by a peer-method
-      try
-      {
-        sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropel'));
-        // throws exception if classPath is invalid
-        checkPropertyPath($propertyPath);
-      }
-      catch (Exception $e)
-      {
-        return false;
-      }
+      $objectPath = getObjectPathForProperyPath($this->baseClass , $column);
 
-      return true;
+      $this->addObjectPath($objectPath);
     }
     else
     {
-      return in_array($propertyPath, $this->selectCriteria->getSelectColumns());
+      if (!in_array($column, $this->selectCriteria->getSelectColumns()))
+      {
+        throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
+      }
     }
   }
 
@@ -442,11 +498,11 @@ class sfDataSourcePropel extends sfDataSource
   /**
    * @see sfDataSource::doSort()
    */
-  protected function doSort($propertyPath, $order)
+  protected function doSort($column, $order)
   {
     $sortByPeer = false;
 
-    // translate $propertyPath to propel column-name
+    // translate $column to propel column-name
     if ($this->baseClass != null)
     {
       // check if a DoSelect*Sort method has been defined, that contains the sort intelegence
@@ -456,24 +512,24 @@ class sfDataSourcePropel extends sfDataSource
 //        $sortByPeer = true;
 //
 //        $basePeer = constant($this->baseClass.'::PEER');
-//        $this->selectCriteria = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'Sort'), array($this->selectCriteria, $propertyPath, $order));
+//        $this->selectCriteria = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'Sort'), array($this->selectCriteria, $column, $order));
 //      }
 //      else
 //      {
         //this is the simple implementation, since table aliasses cannot be automatically be resolved with custom peer methods
         //current column
-        if (strpos($propertyPath, '.')===false)
+        if (strpos($column, '.')===false)
         {
           $tableName = constant($this->baseClass.'Peer::TABLE_NAME');
-          $fieldName = $propertyPath;
+          $fieldName = $column;
         }
         // or (directly)related column
         else
         {
-          list($relatedClass, $fieldName) = explode('.',$propertyPath, 2);
+          list($relatedClass, $fieldName) = explode('.',$column, 2);
           $tableName = constant($relatedClass.'Peer::TABLE_NAME');
         }
-        $propertyPath =  $tableName.'.'.$fieldName;
+        $column =  $tableName.'.'.$fieldName;
 //      }
     }
 
@@ -484,10 +540,10 @@ class sfDataSourcePropel extends sfDataSource
       switch ($order)
       {
         case sfDataSourceInterface::ASC:
-          $this->selectCriteria->addAscendingOrderByColumn($propertyPath);
+          $this->selectCriteria->addAscendingOrderByColumn($column);
           break;
         case sfDataSourceInterface::DESC:
-          $this->selectCriteria->addDescendingOrderByColumn($propertyPath);
+          $this->selectCriteria->addDescendingOrderByColumn($column);
           break;
         default:
           throw new Exception('sfDataSourcePropel::doSort() only accepts "'.sfDataSourceInterface::ASC.'" or "'.sfDataSourceInterface::DESC.'" as argument');
@@ -504,7 +560,7 @@ class sfDataSourcePropel extends sfDataSource
   {
     foreach ($fields as $columnName => $column)
     {
-      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropel'));
+      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
       $columnName = translatePropertyPathToAliasedColumn($this->baseClass.'.'.$columnName);
 
       if (!isset($column['value']))

@@ -97,7 +97,7 @@ class sfGrid implements Countable
   /**
    * Sets the columns that should be displayed in the grid.
    *
-   * @param array $columns An array of column names that must match the column 
+   * @param array $columns An array of column names that must match the column
    *                       names in the data source.
    */
   public function setColumns(array $columns)
@@ -108,14 +108,11 @@ class sfGrid implements Countable
       {
         throw new InvalidArgumentException('The column names must be strings');
       }
-      if (!$this->getDataSource()->addPropertyPath($column))
-      {
-        throw new LogicException(sprintf('The column "%s" does not exist in the data source', $column));
-      }
+      !$this->getDataSource()->requireColumn($column);
     }
-    
+
     $this->columns = $columns;
-    
+
     foreach ($columns as $column)
     {
       $this->setWidget($column, new sfWidgetText());
@@ -142,22 +139,22 @@ class sfGrid implements Countable
   {
     return in_array($column, $this->columns);
   }
-  
+
   /**
-   * Sets a list of titles that should be used for the given columns. The 
-   * titles should be given as associative array with the column 
+   * Sets a list of titles that should be used for the given columns. The
+   * titles should be given as associative array with the column
    * names as keys.
-   * 
+   *
    * <code>
    * $grid->setColumnTitles(array(
    *   'id'         => 'Key',
    *   'created_at' => 'Created At',
    * ));
    * </code>
-   * 
+   *
    * Columns for which you do not specify a widget will not be modified. Per
-   * default all columns are rendered with sfWidgetText. 
-   * 
+   * default all columns are rendered with sfWidgetText.
+   *
    * @param array $columnTitles An associative array of column names and titles
    * @throws LogicException     Throws an exception if any of the given column
    *                            names has not been configured with setColumns()
@@ -169,12 +166,12 @@ class sfGrid implements Countable
       $this->setColumnTitle($column, $title);
     }
   }
-  
+
   /**
    * Sets the title used to render above the given column.
-   * 
+   *
    * Per default all columns have a uppercase-first title of the column-name
-   * 
+   *
    * @param  string $column   The name of the column
    * @param  string $title    The title used to render above this column
    * @throws LogicException   Throws an exception if the given column
@@ -186,10 +183,10 @@ class sfGrid implements Countable
     {
       throw new LogicException(sprintf('The column "%s" has not been configured', $column));
     }
-    
+
     $this->columnTitles[$column] = $title;
   }
-  
+
   /**
    * Returns the title for a column
    *
@@ -202,7 +199,7 @@ class sfGrid implements Countable
     {
       throw new LogicException(sprintf('The column "%s" is not defined for this grid', $column));
     }
-    
+
     if (isset($this->columnTitles[$column]))
     {
       $title = $this->columnTitles[$column];
@@ -211,7 +208,7 @@ class sfGrid implements Countable
     {
       $title = ucFirst($column);
     }
-    
+
     return $title;
   }
 
@@ -230,7 +227,7 @@ class sfGrid implements Countable
    * corresponding class "sfGridFormatter%Name%" must exist, where %Name%
    * is the passed name with an upper cased first character. This class must
    * also implement sfGridFormatterInterface, otherwise an exception is thrown.
-   * 
+   *
    * @param  string $name              The name of the formatter
    * @throws UnexpectedValueException  Throws an exception when the class
    *                                   sfGridFormatter%Name% does not exist
@@ -246,14 +243,14 @@ class sfGrid implements Countable
     {
       throw new UnexpectedValueException(sprintf('The formatter name "%s" (class %s) does not exist', $name, $class));
     }
-    
+
     // the formatter must implement sfGridFormatterInterface
     $reflection = new ReflectionClass($class);
     if (!$reflection->implementsInterface('sfGridFormatterInterface'))
     {
       throw new UnexpectedValueException(sprintf('The formatter "%s" (class %s) must implement sfGridFormatterInterface', $name, $class));
     }
-    
+
     $this->setFormatter(new $class($this));
   }
 
@@ -293,7 +290,7 @@ class sfGrid implements Countable
 
     return $this->formatter->render();
   }
-  
+
   /**
    * Renders the grid
    *
@@ -301,7 +298,7 @@ class sfGrid implements Countable
    */
   public function __toString()
   {
-  	return $this->render();
+    return $this->render();
   }
 
   /**
@@ -330,10 +327,7 @@ class sfGrid implements Countable
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfGrid::ASC or sfGrid::DESC', $order));
     }
 
-    if (!$this->getDataSource()->addPropertyPath($column))
-    {
-      throw new LogicException(sprintf('The column "%s" has not been configured', $column));
-    }
+    $this->getDataSource()->requireColumn($column);
 
     $this->sortColumn = $column;
     $this->sortOrder = $order;
@@ -390,12 +384,12 @@ class sfGrid implements Countable
     {
       $this->uri = $uri;
     }
-    else 
+    else
     {
       $parts = explode('?', $uri);
       $this->uri = $parts[0];
     }
-    
+
   }
 
   /**
@@ -430,7 +424,7 @@ class sfGrid implements Countable
     {
       // the developer can also pass a single column name
       $columns = (array)$columns;
-  
+
       foreach ($columns as $column)
       {
         if (!$this->hasColumn($column))
@@ -438,7 +432,7 @@ class sfGrid implements Countable
           throw new LogicException(sprintf('The column "%s" has not been configured', $column));
         }
       }
-    
+
       $this->sortable = $columns;
     }
   }
@@ -454,27 +448,27 @@ class sfGrid implements Countable
     {
       return $this->getColumns();
     }
-    else 
-    {      
+    else
+    {
       return $this->sortable;
     }
   }
-  
+
   /**
-   * Sets a list of widgets that should be used to render values in the given 
-   * columns. The widgets should be given as associative array with the column 
+   * Sets a list of widgets that should be used to render values in the given
+   * columns. The widgets should be given as associative array with the column
    * names as keys and instances of sfWidget as values.
-   * 
+   *
    * <code>
    * $grid->setWidgets(array(
    *   'id'         => new sfWidgetText(),
    *   'created_at' => new sfWidgetDate(),
    * ));
    * </code>
-   * 
+   *
    * Columns for which you do not specify a widget will not be modified. Per
-   * default all columns are rendered with sfWidgetText. 
-   * 
+   * default all columns are rendered with sfWidgetText.
+   *
    * @param array $widgets   An associative array of column names and widgets
    * @throws LogicException  Throws an exception if any of the given column
    *                         names has not been configured with setColumns()
@@ -486,12 +480,12 @@ class sfGrid implements Countable
       $this->setWidget($column, $widget);
     }
   }
-  
+
   /**
    * Sets the widget used to render values in the given column.
-   * 
+   *
    * Per default all columns are rendered with sfWidgetText.
-   * 
+   *
    * @param  string $column   The name of the column
    * @param  sfWidget $widget The widget used to render values in this column
    * @throws LogicException   Throws an exception if the given column
@@ -503,16 +497,16 @@ class sfGrid implements Countable
     {
       throw new LogicException(sprintf('The column "%s" has not been configured', $column));
     }
-    
+
     $this->widgets[$column] = $widget;
   }
-  
+
   /**
    * Returns all widgets for all columns.
-   * 
+   *
    * Per default all columns are rendered with sfWidgetText. You can modify
    * the used widgets for each column by calling setWidgets() or setWidget().
-   * 
+   *
    * @return array An associative array with column names as keys and instances
    *               of sfWidget as values.
    */
@@ -520,13 +514,13 @@ class sfGrid implements Countable
   {
     return $this->widgets;
   }
-  
+
   /**
    * Returns the widget used to render the given column.
-   * 
+   *
    * Per default all columns are rendered with sfWidgetText. You can modify
    * the used widgets for each column by calling setWidgets() or setWidget().
-   * 
+   *
    * @param  string $column  The name of the column
    * @return sfWidget        The widget used to render this column
    * @throws LogicException  Throws an exception if the given column
@@ -538,7 +532,7 @@ class sfGrid implements Countable
     {
       throw new LogicException(sprintf('The column "%s" has not been configured', $column));
     }
-    
+
     return $this->widgets[$column];
   }
 
