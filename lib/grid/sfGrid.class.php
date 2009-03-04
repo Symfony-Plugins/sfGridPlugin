@@ -108,7 +108,7 @@ class sfGrid implements Countable
       {
         throw new InvalidArgumentException('The column names must be strings');
       }
-      !$this->getDataSource()->requireColumn($column);
+      $this->getDataSource()->requireColumn($column);
     }
 
     $this->columns = $columns;

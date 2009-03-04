@@ -205,8 +205,10 @@ class sfDataSourcePropel extends sfDataSource
       $criteria = clone $this->selectCriteria;
 
       $criteria = addJoins($criteria, $this->objectPaths);
+      
+//      $criteria = addSelects($criteria, $this->objectPaths);
 
-      $this->data = loadData($criteria, $this->objectPaths, $this->connection);
+      $this->data = hydrate($criteria, $this->objectPaths, $this->connection);
 
     }
     // or return raw result sets in case custom criteria objects have been provided
@@ -348,51 +350,8 @@ class sfDataSourcePropel extends sfDataSource
     if ($this->baseClass != null)
     {
       sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-
-      // we're going to modify criteria, so copy it first
-      $basePeer = constant($this->baseClass.'::PEER');
-      $alias = $this->baseClass;
-
-      $criteria = clone $this->selectCriteria;
-
-      // We need to set the primary table name, since in the case that there are no WHERE columns
-      // it will be impossible for the BasePeer::createSelectSql() method to determine which
-      // tables go into the FROM clause.
-      $criteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME'));
-
-      $criteria->addAlias($alias, constant($basePeer.'::TABLE_NAME'));
-
-      if (!$criteria->hasSelectClause())
-      {
-        call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($criteria, $alias));
-      }
-
-      $criteria->setLimit(0);
-      $criteria->setOffset(0);
-      $criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
-
-      if ($this->connection === null)
-      {
-        $con = Propel::getConnection(constant($basePeer.'::DATABASE_NAME'), Propel::CONNECTION_READ);
-      }
-      else
-      {
-        $con = $this->connection;
-      }
-
-      $criteria = addJoins($criteria, $this->objectPaths, false);
-
-      $stmt = BasePeer::doCount($criteria, $con);
-      if ($row = $stmt->fetch(PDO::FETCH_NUM))
-      {
-        $count = (int) $row[0];
-      }
-      else
-      {
-        $count = 0; // no rows returned; we infer that means 0 matches.
-      }
-      $stmt->closeCursor();
-
+      
+      $count = countAll($this->selectCriteria, $this->objectPaths, $this->connection);
     }
     // or in case we are using custom criteria objects for select and count
     else
@@ -496,47 +455,32 @@ class sfDataSourcePropel extends sfDataSource
   }
 
   /**
+   * To be implemented in an extension
+   * 
+   * return null to disable the default sorting
+   *
+   * @param string $column
+   * @param string $order
+   * @return string     the column name to do the default sorting on.
+   */
+  protected function doCustomSort($column, $order)
+  {
+    return $column;
+  }
+  
+  /**
    * @see sfDataSource::doSort()
    */
   protected function doSort($column, $order)
   {
-    $sortByPeer = false;
-
     // translate $column to propel column-name
-    if ($this->baseClass != null)
-    {
-      // check if a DoSelect*Sort method has been defined, that contains the sort intelegence
-//      $peerClass = constant($this->baseClass.'::PEER');
-//      if (method_exists($peerClass, 'doSelect'.$this->peerMethod.'Sort'))
-//      {
-//        $sortByPeer = true;
-//
-//        $basePeer = constant($this->baseClass.'::PEER');
-//        $this->selectCriteria = call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'Sort'), array($this->selectCriteria, $column, $order));
-//      }
-//      else
-//      {
-        //this is the simple implementation, since table aliasses cannot be automatically be resolved with custom peer methods
-        //current column
-        if (strpos($column, '.')===false)
-        {
-          $tableName = constant($this->baseClass.'Peer::TABLE_NAME');
-          $fieldName = $column;
-        }
-        // or (directly)related column
-        else
-        {
-          list($relatedClass, $fieldName) = explode('.',$column, 2);
-          $tableName = constant($relatedClass.'Peer::TABLE_NAME');
-        }
-        $column =  $tableName.'.'.$fieldName;
-//      }
-    }
-
-    if (!$sortByPeer)
+    $column = translatePropertyPathToAliasedColumn($this->baseClass, $column);
+    
+    $column = $this->doCustomSort($column, $order);
+    
+    if ($column != null)
     {
       $this->selectCriteria->clearOrderByColumns();
-
       switch ($order)
       {
         case sfDataSourceInterface::ASC:
@@ -549,7 +493,7 @@ class sfDataSourcePropel extends sfDataSource
           throw new Exception('sfDataSourcePropel::doSort() only accepts "'.sfDataSourceInterface::ASC.'" or "'.sfDataSourceInterface::DESC.'" as argument');
       }
     }
-
+    
     $this->refresh();
   }
 
@@ -561,7 +505,7 @@ class sfDataSourcePropel extends sfDataSource
     foreach ($fields as $columnName => $column)
     {
       sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-      $columnName = translatePropertyPathToAliasedColumn($this->baseClass.'.'.$columnName);
+      $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $columnName);
 
       if (!isset($column['value']))
       {

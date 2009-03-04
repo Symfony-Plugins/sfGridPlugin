@@ -15,87 +15,6 @@
  * @version    SVN: $Id$
  */
 
-/**
- * Resolves the (last) ClassName from the objectPath
- *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
- * @return string            the ClassName
- */
-function resolveClassNameFromObjectPath($objectPath)
-{
-  // get the latest classReference (the part after the last '.')
-  $classReferences = explode('.', $objectPath);
-  $classReference = $classReferences[count($classReferences)-1];
-
-  // if there are multiple references to the same table, remove the RelatedBy.... part
-  $classParts = explode('RelatedBy', $classReference);
-  $className = $classParts[0];
-
-  return $className;
-}
-
-/**
- * Resolves the Add-method for the first relation in an objectPath
- *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
- * @return string            the add-Method of the child to register itself to its parent
- */
-function resolveFirstAddMethodForObjectPath($objectPath)
-{
-  // get the latest classReference (the part after the last '.')
-  $classReferences = explode('.', $objectPath);
-  $className = $classReferences[0];
-//  $classReference = $classReferences[count($classReferences)-1];
-
-  $related = '';
-  // if there are multiple references to the same table, remove the RelatedBy.... part
-  $classParts = explode('RelatedBy', $classReferences[1]);
-  if (count($classParts)>1)
-  {
-    $related = 'RelatedBy'.$classParts[1];
-  }
-
-  return 'add'.$className.$related;
-}
-
-/**
- * TODO: Enter description here...
- *
- * @param string $propertyPath, objectPath followed by a propertyName
- */
-function checkPropertyPath($baseClass, $propertyPath)
-{
-  $objectPath = getObjectPathForProperyPath($baseClass, $propertyPath);
-  checkObjectPath($objectPath);
-
-  //get property from propertyPath
-  $parts = explode('.', $propertyPath);
-  $property = array_pop($parts);
-
-  $lastObject = resolveClassNameFromObjectPath($objectPath);
-  $getterMethod = 'get'.$property;
-
-  if (!method_exists($lastObject, $getterMethod))
-  {
-    throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
-  }
-
-}
-
-function getObjectPathForProperyPath($baseClass, $propertyPath)
-{
-  //remove property from propertyPath
-  $parts = explode('.', $propertyPath);
-  $property = array_pop($parts);
-
-  // add baseClass to parts, before constructing objectPath
-  array_unshift($parts, $baseClass);
-  $objectPath = implode('.', $parts);
-
-  return $objectPath;
-}
 
 /**
  * Tests if the object path is valid, if not throws an exception
@@ -168,6 +87,110 @@ function checkObjectPath($objectPath)
   }
 
   // done, sucessfully parsed the objectPath
+}
+
+/**
+ * TODO: Enter description here...
+ *
+ * @param string $propertyPath, objectPath followed by a propertyName
+ */
+function checkPropertyPath($baseClass, $propertyPath)
+{
+  $objectPath = getObjectPathForProperyPath($baseClass, $propertyPath);
+  checkObjectPath($objectPath);
+
+  //get property from propertyPath
+  $parts = explode('.', $propertyPath);
+  $property = array_pop($parts);
+
+  $lastObject = resolveClassNameFromObjectPath($objectPath);
+  $getterMethod = 'get'.$property;
+
+  if (!method_exists($lastObject, $getterMethod))
+  {
+    throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
+  }
+
+}
+
+function getObjectPathForProperyPath($baseClass, $propertyPath)
+{
+  //remove property from propertyPath
+  $parts = explode('.', $propertyPath);
+  $property = array_pop($parts);
+
+  // add baseClass to parts, before constructing objectPath
+  array_unshift($parts, $baseClass);
+  $objectPath = implode('.', $parts);
+
+  return $objectPath;
+}
+
+/**
+ * translates a propertyPath to an aliased database selectColumn
+ *
+ * @param string $baseClass     The base class for the hydration
+ * @param string $propertyPath  The propertyPath of the field
+ * @return string               An aliased columnName for the database query
+ */
+function translatePropertyPathToAliasedColumn($baseClass, $propertyPath)
+{
+  //remove property from the path 
+  $parts = explode('.', $propertyPath);
+  $property = array_pop($parts);
+  
+  // add the baseClass in front of the objectPath
+  // add baseClass to parts, before constructing objectPath
+  array_unshift($parts, $baseClass);
+  // insert _ between all objects in the objectPath
+  $aliasedColumn = implode('_', $parts);
+
+  return $aliasedColumn.'.'.$property;
+}
+
+/**
+ * Resolves the (last) ClassName from the objectPath
+ *
+ * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
+ *                           the childClassNames should have a getter in the baseClass
+ * @return string            the ClassName
+ */
+function resolveClassNameFromObjectPath($objectPath)
+{
+  // get the latest classReference (the part after the last '.')
+  $classReferences = explode('.', $objectPath);
+  $classReference = $classReferences[count($classReferences)-1];
+
+  // if there are multiple references to the same table, remove the RelatedBy.... part
+  $classParts = explode('RelatedBy', $classReference);
+  $className = $classParts[0];
+
+  return $className;
+}
+
+/**
+ * Resolves the Add-method for the first relation in an objectPath
+ *
+ * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
+ *                           the childClassNames should have a getter in the baseClass
+ * @return string            the add-Method of the child to register itself to its parent
+ */
+function resolveFirstAddMethodForObjectPath($objectPath)
+{
+  // get the latest classReference (the part after the last '.')
+  $classReferences = explode('.', $objectPath);
+  $className = $classReferences[0];
+//  $classReference = $classReferences[count($classReferences)-1];
+
+  $related = '';
+  // if there are multiple references to the same table, remove the RelatedBy.... part
+  $classParts = explode('RelatedBy', $classReferences[1]);
+  if (count($classParts)>1)
+  {
+    $related = 'RelatedBy'.$classParts[1];
+  }
+
+  return 'add'.$className.$related;
 }
 
 /**
@@ -322,6 +345,7 @@ function addTableAliasses(&$criteria = null, $objectPaths)
 
 /**
  * addJoins.
+ * TODO: add support for inner/strict/right joins as well!
  *
  * The data source can be given as an (array of) objectPaths, or a custom
  * Criteria object. Custom criteria objects will not get hydrated, objects
@@ -469,20 +493,22 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
 }
 
 /**
- * private method to load the Data,
+ * private method to hydrate the (related)objects from the objectPaths,
  *
  * the functionality depends on the constructor call (have custom Criteria been provided, or is hydration of objects possible)
  */
 
 /**
- * Loads the data from the database and places it in an array.
+ * hydrates the data for the objects in the objectPaths from the database 
+ * and places them in an array.
  *
- * @param unknown_type $criteria
- * @param unknown_type $objectPaths
- * @param array $extraColumns
- * @param unknown_type $connection
+ * @param Criteria $criteria
+ * @param array[string] $objectPaths
+ * @param PDO $connection
+ * 
+ * @return array        the array of hydrated (base)objects, with there relations
  */
-function loadData($criteria = null, $objectPaths, $connection = null)
+function hydrate($criteria = null, $objectPaths, $connection = null)
 {
   // data holds all main results
   $data = array();
@@ -568,23 +594,51 @@ function loadData($criteria = null, $objectPaths, $connection = null)
   return $data;
 }
 
+
 /**
- * @see sfDataSourceInterface::countAll()
+ * Counts the number of results for the generated query
+ * TODO: add support for inner/strict/right joins as well!
+ *
+ * @param Criteria $criteria
+ * @param array[string] $objectPaths
+ * @param PDO $connection
+ * 
+ * @return int    the number of results for the generated query
  */
-function countAll()
+function countAll($criteria, $objectPaths, $connection = null)
 {
-  $criteria = clone $this->countCriteria;
+  $baseClass = resolveBaseClass($objectPaths[0]);
+  $basePeer = constant($baseClass.'::PEER');
+  $alias = $baseClass;
+  
+  // we're going to modify criteria, so copy it first
+  $criteria = clone $criteria;
 
   $criteria->clearOrderByColumns(); // ORDER BY won't ever affect the count
   $criteria->setLimit(-1);          // LIMIT affects the count negative
   $criteria->setOffset(0);          // OFFSET affects the count negative
 
-  if (!$criteria->hasSelectClause()) {
-    throw new Exception('Please provide some select Criteria in the countCriteria (this can be a subset)');
+  // We need to set the primary table name, since in the case that there are no WHERE columns
+  // it will be impossible for the BasePeer::createSelectSql() method to determine which
+  // tables go into the FROM clause.
+  $criteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME'));
+  $criteria->addAlias($alias, constant($basePeer.'::TABLE_NAME'));
+
+  $criteria = addJoins($criteria, $objectPaths, false);
+  
+
+  if (!$criteria->hasSelectClause()) 
+  {
+    call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($criteria, $alias));
+  }
+
+  if ($connection === null)
+  {
+    $connection = Propel::getConnection(constant($basePeer.'::DATABASE_NAME'), Propel::CONNECTION_READ);
   }
 
   // BasePeer returns a PDOStatement
-  $stmt = BasePeer::doCount($criteria, $this->connection);
+  $stmt = BasePeer::doCount($criteria, $connection);
 
   if ($row = $stmt->fetch(PDO::FETCH_NUM))
   {
@@ -595,14 +649,8 @@ function countAll()
     $count = 0; // no rows returned; we infer that means 0 matches.
   }
   $stmt->closeCursor();
+  
   return $count;
 }
 
-function translatePropertyPathToAliasedColumn($propertyPath)
-{
-  $parts = explode('.', $propertyPath);
-  $property = array_pop($parts);
-  $aliasedColumn = implode('_', $parts);
 
-  return $aliasedColumn.'.'.$property;
-}
