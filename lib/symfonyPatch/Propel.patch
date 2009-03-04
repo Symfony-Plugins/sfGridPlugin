@@ -1,0 +1,91 @@
+### Eclipse Workspace Patch 1.0
+# Patch to allow lazy resolving of realTableName
+#P symfony
+Index:
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/Criteria.php
+====================​====================​====================​=======
+---
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/Criteria.php (revision
+1094)
++++
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/Criteria.php (working
+copy)
+@@ -1291,13 +1291,15 @@
+             Propel::log("Could not get a DBAdapter, sql may be wrong",
+Propel::LOG_ERR);
+         }
+
+- //init $this->realtable
++ //init $this->realtable, if possible
+         $realtable = $criteria->getTa​bleForAlias($this-​>table);
+- if (! strlen ( $realtable ) ) {
+- $realtable = $this->table;
+- }
+- $this->realtable = $realtable;
+-
++// if (! strlen ( $realtable ) ) {
++// $realtable = $this->table;
++// }
++// $this->realtable = $realtable;
++ if ( strlen ( $realtable ) ) {
++ $this->realtable = $realtable;
++ }
+     }
+
+     /**
+@@ -1443,12 +1445,13 @@
+      *
+      * @param string &$sb The string that will receive the Prepared
+Statement
+      * @param array $params A list to which Prepared Statement parameters
++ * @param Criteria $criteria Optional Criteria object to resolve
+Table-Aliasses for this query
+      * will be appended
+      * @return void
+      * @throws PropelException - if the expression builder cannot figure
+out how to turn a specified
+      * expression into proper SQL.
+      */
+- public function appendPsTo(&$sb, array &$params)
++ public function appendPsTo(&$sb, array &$params, Criteria $criteria = null)
+     {
+         if ($this->column === null) {
+             return;
+@@ -1471,8 +1474,14 @@
+
+             // Check to see if table is an alias & store real name, if so
+             // (real table name is needed for the returned $params array)
++ if (!isset($this->realtable) && ($criteria != null))
++ {
++ // lazy initialisation of realTable Alias,
++ // latest criteria has been provided with this call, needed in
+order to to find the alias
++ $this->realtable = $criteria->getTa​bleForAlias($this-​>table);
++ }
+             $realtable = $this->realtable;
+-
++
+             // There are several different types of expressions that need
+individual handling:
+             // IN/NOT IN, LIKE/NOT LIKE, and traditional expressions.
+
+Index:
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/BasePeer.php
+====================​====================​====================​=======
+---
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/BasePeer.php (revision
+1094)
++++
+lib/symfony/lib/plug​ins/sfPropelPlugin/l​ib/vendor/propel/uti​l/BasePeer.php (working
+copy)
+@@ -780,7 +780,7 @@
+             $criterion->setDB($db);
+
+             $sb = "";
+- $criterion->appendPsTo($sb, $params);
++ $criterion->appendPsTo($sb, $params, $criteria);
+             $whereClause[] = $sb;
+
+         }
+
+### END OF Patch

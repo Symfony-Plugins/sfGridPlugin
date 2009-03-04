@@ -108,7 +108,13 @@ function checkPropertyPath($baseClass, $propertyPath)
 
   if (!method_exists($lastObject, $getterMethod))
   {
-    throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
+    // test if it possibly is a custom column
+    $basePeer = constant($baseClass.'::PEER');
+    $custom = array_key_exists($property, call_user_func(array($basePeer, 'getCustomColumns')));
+    if (!$custom)
+    {
+      throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
+    }
   }
 
 }
@@ -245,104 +251,6 @@ function resolveBaseClass($objectPath)
   return $classReferences[0];
 }
 
-function addTableAliasses(&$criteria = null, $objectPaths)
-{
-  // if the source is provided as object paths, create hydratable criteria
-  if (!is_array($objectPaths))
-  {
-    throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
-  }
-
-  // generate an array of classes to be retrieved from DB
-  $classes = array();
-  $baseClass = resolveBaseClass($objectPaths[0]);
-  $basePeer = constant($baseClass.'::PEER');
-
-  foreach ($objectPaths as $objectPath)
-  {
-    // validation checks @todo: this can be skipped in production
-    // test if there is only one base class
-    if ($baseClass != ($currentBaseClass = resolveBaseClass($objectPath)))
-    {
-      throw new LogicException(sprintf('Not all base classes are the same.
-                                        Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
-    }
-    // test if relations are valid
-    checkObjectPath($objectPath);
-
-    // get flat array of classes that need to get hydrated
-    $classes =  resolveAllClasses($objectPath, $classes);
-  }
-
-  // construct full hydration-profile
-  $criteria->setDbName(constant($basePeer.'::DATABASE_NAME'));
-
-  // process all classes
-  foreach ($classes as $alias => &$class)
-  {
-    // TODO: should I start with the base $class??? in that case do it before the foreach and skip base in foreach
-    $peer = constant($class['className'].'::PEER');
-
-    //add alias for tables
-    $criteria->addAlias($alias, constant($peer.'::TABLE_NAME'));
-
-    //addSelectColumns
-    if ($withColumns)
-    {
-      call_user_func_array(array($peer, 'addSelectColumnsAliased'), array($criteria, $alias));
-    }
-
-    // get TableMap for base
-    $baseTM = call_user_func_array(array($peer, 'getTableMap'), array());
-
-    //join related
-    foreach ($class['relatedTo'] as $relatedTo)
-    {
-      $relatedAlias = $alias.'_'.$relatedTo;
-      $relatedPeer = constant($classes[$relatedAlias]['className'].'::PEER');
-      // get TableMap for related
-      $relatedTM = call_user_func_array(array($relatedPeer, 'getTableMap'), array());
-
-      $relatedPKs = $relatedTM->getPrimaryKeyColumns();
-      // only support for one Primary Key
-      $relatedPKName = $relatedPKs[0]->getColumnName();
-
-      // search for relation (BaseTable-ForeignKey / ForeignTable-PrimaryKey)
-      $RelatedByArr = explode('RelatedBy', $relatedTo, 2);
-      foreach ($baseTM->getColumns() as $relatedColumn)
-      {
-        $baseFKName = 'ID'; // @todo: hack to make sfGuardUserProfile to work, for now (since this one cannot be resolved)
-        if (count($RelatedByArr)==1)
-        {
-          $colRelTableName = $relatedColumn->getRelatedTableName();
-          if ((!empty($colRelTableName)) && ($baseTM->getDatabaseMap()->containsTable($colRelTableName)) && ($baseTM->getDatabaseMap()->getTable($colRelTableName)->getPhpName() == $RelatedByArr[0]))
-          {
-            $baseFKName = $relatedColumn->getName();
-            break;
-          }
-          //TODO: reverse lookup (per table) to fix hack from above...
-        }
-        else
-        {
-          if ($relatedColumn->getPhpName() == $RelatedByArr[1])
-          {
-            $baseFKName = $relatedColumn->getName();
-            break;
-          }
-        }
-      }
-
-      $joinColumnLeft  = call_user_func_array(array($peer, 'alias'), array($alias, constant($peer.'::'.$baseFKName)));
-      $joinColumnRight = call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, constant($relatedPeer.'::'.$relatedPKName)));
-      $joinType = Criteria::LEFT_JOIN; //TODO: add lookup table that can define the joinType
-
-      $criteria->addJoin($joinColumnLeft, $joinColumnRight, $joinType);
-    }
-  }
-
-  return $criteria;
-}
-
 /**
  * addJoins.
  * TODO: add support for inner/strict/right joins as well!
@@ -438,8 +346,9 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
     if ($withColumns)
     {
       call_user_func_array(array($peer, 'addSelectColumnsAliased'), array($criteria, $alias));
-//      call_user_func_array(array($peer, 'addCustomColumnsAliased'), array($criteria, $alias));
     }
+    // this always has to be done, since you might want to filter on these columns 
+    call_user_func_array(array($peer, 'addCustomSelectColumns'), array($criteria, $alias));
 
     // get TableMap for base
     $baseTM = call_user_func_array(array($peer, 'getTableMap'), array());
@@ -584,7 +493,7 @@ function hydrate($criteria = null, $objectPaths, $connection = null)
       $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
     }
 
-//    $instance->hydrateCustomColumns($row, $startcol, $criteria);
+    $instance->hydrateCustomColumns($row, $startcol, $criteria);
 
     $data[] = $instance;
   }
@@ -631,6 +540,8 @@ function countAll($criteria, $objectPaths, $connection = null)
   {
     call_user_func_array(array($basePeer, 'addSelectColumnsAliased'), array($criteria, $alias));
   }
+  // this always has to be done, since you might want to filter on these columns 
+  call_user_func_array(array($basePeer, 'addCustomSelectColumns'), array($criteria, $alias));
 
   if ($connection === null)
   {

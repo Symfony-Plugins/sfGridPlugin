@@ -3,6 +3,7 @@
 /*
  * This file is part of the symfony package.
  * (c) Leon van der Ree <leon@fun4me.demon.nl>
+ * (c) Frans van der Lek
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -174,6 +175,19 @@ class sfDataSourcePropel extends sfDataSource
     {
       throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
     }
+    
+    $this->init();
+  }
+  
+  /**
+   * Customisable init function
+   * 
+   * this method is defined to make extending this class easy.
+   *
+   */
+  protected function init()
+  {
+    //add your custom init here
   }
 
   /**
@@ -181,17 +195,17 @@ class sfDataSourcePropel extends sfDataSource
    *
    * @return boolean Whether the data has already been loaded
    */
-  private function isDataLoaded()
+  protected function isDataLoaded()
   {
     return $this->data !== null;
   }
 
   /**
-   * private method to load the Data,
+   * protected method to load the Data,
    *
    * the functionality depends on the constructor call (have custom Criteria been provided, or is hydration of objects possible)
    */
-  private function loadData()
+  protected function loadData()
   {
     // data holds all main results
     $this->data = array();
@@ -206,6 +220,7 @@ class sfDataSourcePropel extends sfDataSource
 
       $criteria = addJoins($criteria, $this->objectPaths);
       
+      //TODO: split Joins and Selects
 //      $criteria = addSelects($criteria, $this->objectPaths);
 
       $this->data = hydrate($criteria, $this->objectPaths, $this->connection);
@@ -473,11 +488,13 @@ class sfDataSourcePropel extends sfDataSource
    */
   protected function doSort($column, $order)
   {
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
+    
     // translate $column to propel column-name
     $column = translatePropertyPathToAliasedColumn($this->baseClass, $column);
-    
+
     $column = $this->doCustomSort($column, $order);
-    
+
     if ($column != null)
     {
       $this->selectCriteria->clearOrderByColumns();
@@ -502,10 +519,12 @@ class sfDataSourcePropel extends sfDataSource
    */
   public function setFilter($fields)
   {
-    foreach ($fields as $columnName => $column)
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
+    
+    foreach ($fields as $propertyPath => $column)
     {
-      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-      $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $columnName);
+      $this->requireColumn($propertyPath);
+      $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $propertyPath);
 
       if (!isset($column['value']))
       {
@@ -514,7 +533,7 @@ class sfDataSourcePropel extends sfDataSource
 
       $value = $column['value'];
       $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
-
+      
       $this->selectCriteria->add($columnName, $value, $operator);
     }
   }
