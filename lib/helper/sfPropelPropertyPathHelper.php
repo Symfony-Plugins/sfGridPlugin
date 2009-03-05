@@ -19,8 +19,8 @@
 /**
  * Tests if the object path is valid, if not throws an exception
  *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
+ * @param string $objectPath an objectPath, with syntax baseClassName.RelationName.RelationName...
+ *                           the RelationNames should be defined in the peer::getRelations method
  *
  */
 function checkObjectPath($objectPath)
@@ -30,14 +30,14 @@ function checkObjectPath($objectPath)
   // if path was not provided
   if (count ($classRelations) == 0)
   {
-    throw new UnexpectedValueException('empty path was provided');
+    throw new InvalidArgumentException('empty path was provided');
   }
 
   $baseClass = $classRelations[0];
   // then it must be an existing class
   if (!class_exists($baseClass))
   {
-    throw new UnexpectedValueException(sprintf('Class "%s" does not exist', $baseClass));
+    throw new InvalidArgumentException(sprintf('Class "%s" does not exist', $baseClass));
   }
 
   // class should be extension of Propel BaseObject
@@ -57,7 +57,6 @@ function checkObjectPath($objectPath)
   //     - related by multiple pk/fk pairs:                                     RelatedTableName (pk/fk-pairs are automatically resolved)
   //     - directly related, but multiple relations from base to parent exist:  RelatedTableNameRelatedByForeignKeyName
   //     - reversely related (one-to-many):                                     RelatedTableNames (with the s)
-  //   - BUG when having multple FKs to same related Table and you do a one-to-many lookup it will find all FKs, you cannot define one FK right now (TODO: with something like relatedBY)...
   //   - NOT tested are self referencing relations (the issue with this is there depth is unknown)
   //   - NOT implemented is joining i18n related tables automatically.
   if (isset($classRelations[1]))
@@ -67,186 +66,20 @@ function checkObjectPath($objectPath)
     $relationPath = $baseClass.'.'.$relationName;
 
     $relatedClass = resolveClassNameFromObjectPath($relationPath);
-    $isOneToMany  = ($relatedClass.'s' == $relationName);
-    $foreignKeys  = resolveForeignKeysForRelationPath($relationPath);
-
-//    echo $relationPath.':<br>';
-//    var_dump($foreignKeys);
-
-    array_unshift($relatedClassRelations, $relatedClass);
+    
+    $relation     = getRelationForRelationPath($relationPath);
+    
+    // (replace/)insert real ClassName at beginning of objectPath 
+    array_unshift($relatedClassRelations, $relation['relatedClass']);
     $newObjectPath = implode('.', $relatedClassRelations);
 
     //recursively check
     checkObjectPath($newObjectPath);
-
-//    die($relatedClass);
-//    // first check if relationName contains the 'RelatedBy' Keyword
-//
-//    // test with reflection if getter exists for RelationName
-//    $getterMethod = 'get'.$relationName;
-//    if (!$baseReflection->hasMethod($getterMethod))
-//    {
-//      // if getter does not exist, but class does, check if there are multiple PKs for the related class, with multiple FKs from base
-//      if (class_exists($relationName))
-//      {
-//        $relatedPeer = getPeerNameForClass($relationName);
-//        $relatedTM = call_user_func(array($relatedPeer, 'getTableMap'));
-//        $relatedPks = $relatedTM ->getPrimaryKeyColumns();
-//
-//        // if not multiple PKs the user provided an illegal
-//        if (count($relatedPks) <= 1)
-//        {
-//          $relatedClass = '';
-//        }
-//      }
-//      else
-//      {
-//        throw new LogicException(sprintf('Class "%s" has no method called "%s". Tip: you can add your own get-method that returns the related object.', $baseClass, $getterMethod));
-//      }
-//    }
-//
-//    // get directly related ClassName
-//    $partialObjectPath = $baseClass . '.' .$relationName;
-//    $relatedClassName = resolveClassNameFromObjectPath($partialObjectPath);
-//    $addMethod = 'add'.resolveFirstMethodForObjectPath($partialObjectPath);
-//    $setMethod = 'set'.resolveFirstMethodForObjectPath($partialObjectPath);
-//
-//    // then it must be an existing class
-//    if (!class_exists($relatedClassName))
-//    {
-//      if (substr($relatedClassName, -1) == 's' // Get the last character
-//          &&
-//          class_exists(substr($relatedClassName, 0, -1))) // Strip last character
-//      {
-//        // switch classnames, to make the relatedClass name the base and visa versa
-//        $orgRelatedClassName = $relatedClassName;
-//        $relatedClassName = $baseClass;
-//        $baseClass = substr($orgRelatedClassName, 0, -1);
-//        $partialObjectPath = $className.'.'.$relatedClassName;
-//        $addMethod = 'add'.resolveFirstMethodForObjectPath($partialObjectPath);
-//        $setMethod = 'set'.resolveFirstMethodForObjectPath($partialObjectPath);
-//      }
-//      else
-//      {
-//        throw new LogicException(sprintf('Class "%s" does not exist.
-//                                         Please note: don\'t use the getter for the foreign-key value, but the getter for the related class instance', $relatedClassName));
-//      }
-//    }
-//
-//    // test here for add-er
-//    $relatedReflection = new ReflectionClass($relatedClassName);
-//    if (!$relatedReflection->hasMethod($addMethod))
-//    {
-//      if (!$relatedReflection->hasMethod($setMethod))
-//      {
-//        throw new LogicException(sprintf('Class "%s" has no method called "%s" or "%s".', $relatedClassName, $addMethod, $setMethod));
-//      }
-//    }
   }
 
   // done, sucessfully parsed the objectPath
 }
 
-
-/**
- * Resolves the ForeingKeys between two tables,
- *
- * @param string $relationPath  partial objectPath consisting of two objects
- *
- * @throws UnexpectedValueException throws an UnexpectedValueException if something else than two parts have been provided in the path
- * @throws Exception  throws an exception if no foreignKeys can be found
- * @return array      array of foreignKeys
- *
- */
-function resolveForeignKeysForRelationPath($relationPath)
-{
-  $parts = explode('.', $relationPath);
-  if (count($parts) != 2)
-  {
-    throw new UnexpectedValueException($relationPath.' should only consist out of two parts!');
-  }
-
-  list($baseClass, $relationName) = $parts;
-  $basePeer     = getPeerNameForClass($baseClass);
-  $relatedClass = resolveClassNameFromObjectPath($relationPath);
-  $relatedPeer  = getPeerNameForClass($relatedClass);
-
-  $isOneToMany  = ($relatedClass.'s' == $relationName);
-  $foreignKeys  = array();
-
-  // if RelatedBy in $relationName, there is only one foreignKey
-  $relationParts = explode('RelatedBy', $relationName);
-  if (count($relationParts)>1)
-  {
-    $foreignKeyPhp = $relationParts[1];
-
-    $baseReflection = new ReflectionClass($baseClass);
-    $getRelated = 'get'.$relationName;
-    if ($baseReflection->hasMethod($getRelated))
-    {
-      $baseTM = call_user_func(array($basePeer, 'getTableMap'));
-
-      // convert fieldPhpName to tableName
-      foreach ($baseTM->getColumns() as $column)
-      {
-        if ($column->getPhpName() == $foreignKeyPhp)
-        {
-          $foreignKeys[] = $column->getName();
-          break;
-        }
-      }
-    }
-  }
-  // directly (with one or multiple PKs) (many-to-one, or one-to-one;  base_class contains the FK(s) to the related table)
-  else if (!$isOneToMany)
-  {
-    $baseTM = call_user_func(array($basePeer, 'getTableMap'));
-    $relatedTableName = constant($relatedPeer.'::TABLE_NAME');
-
-    // find all foreign keys refering from baseTable to RelatedTable
-    foreach ($baseTM->getColumns() as $column)
-    {
-      $colRelTableName = $column->getRelatedTableName();
-
-      if ((!empty($colRelTableName)) // found a FK column
-          && ($colRelTableName == $relatedTableName)) // and FK refering to relatedTable
-      {
-        $foreignKeys[] = $column->getName();
-      }
-    }
-  }
-  // one to many (related_class contains the FK(s) to the base table)
-  else
-  {
-    $relatedTM = call_user_func(array($relatedPeer, 'getTableMap'));
-    $baseTableName = constant($basePeer.'::TABLE_NAME');
-
-    // find all foreign keys refering from RelatedTable to baseTable
-    foreach ($relatedTM->getColumns() as $column)
-    {
-      $colRelTableName = $column->getRelatedTableName();
-
-      if ((!empty($colRelTableName)) // found a FK column
-          && ($colRelTableName == $baseTableName)) // and FK refering to base Table
-      {
-        $foreignKeys[] = $column->getName();
-      }
-    }
-
-  }
-
-  if (count($foreignKeys)==0)
-  {
-    throw new Exception('No ForeignKeys can be found for relationPath "'.$relationPath.'"');
-  }
-
-  return $foreignKeys;
-}
-
-function getPeerNameForClass($class)
-{
-  return constant($class.'::PEER');
-}
 
 /**
  * Checks the resolved objectPath and
@@ -263,29 +96,18 @@ function checkPropertyPath($baseClass, $propertyPath)
   $parts = explode('.', $propertyPath);
   $property = array_pop($parts);
 
-  $lastObject = resolveClassNameFromObjectPath($objectPath);
+  $lastClass = resolveClassNameFromObjectPath($objectPath);
   $getterMethod = 'get'.$property;
 
-  if (!class_exists($lastObject))
-  {
-    if (substr($lastObject, -1) == 's' // Get the last character
-        &&
-        class_exists(substr($lastObject, 0, -1))) // Strip last character
-    {
-      $lastObject = substr($lastObject, 0, -1);
-    }
-  }
-
-
-  if (!method_exists($lastObject, $getterMethod))
+  if (!method_exists($lastClass, $getterMethod))
   {
     // test if it possibly is a custom column
-    $lastObjectPeer = getPeerNameForClass($lastObject);
+    $lastClassPeer = getPeerNameForClass($lastClass);
 
-    $custom = array_key_exists($property, call_user_func(array($lastObjectPeer, 'getCustomColumns')));
+    $custom = array_key_exists($property, call_user_func(array($lastClassPeer, 'getCustomColumns')));
     if (!$custom)
     {
-      throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastObject, $getterMethod));
+      throw new LogicException(sprintf('Class "%s" has no method called "%s".', $lastClass, $getterMethod));
     }
   }
 
@@ -293,38 +115,117 @@ function checkPropertyPath($baseClass, $propertyPath)
 
 
 /**
+ * retreives the relation information to a table
+ *
+ * @param string $relationPath  partial objectPath consisting of two objects
+ *
+ * @throws InvalidArgumentException  throws an InvalidArgumentException if something else than two parts have been provided in the path
+ * @throws Exception                throws an Exception if relation cannot be found in the base peer class 
+ * @return array      array with relation information
+ *
+ */
+function getRelationForRelationPath($relationPath)
+{
+  $parts = explode('.', $relationPath);
+  if (count($parts) != 2)
+  {
+    throw new InvalidArgumentException($relationPath.' should only consist out of two parts!');
+  }
+
+  list($baseClass, $relationName) = $parts;
+  $basePeer = getPeerNameForClass($baseClass);
+  
+  $relations = call_user_func(array($basePeer, 'getRelations'));
+
+  if (isset($relations[$relationName]))
+  {
+    $relation = $relations[$relationName];
+  }
+  else 
+  {
+    throw new Exception('No relation "'.$relationName.'" has been defined in the (base)"'.$basePeer.'"-method "getRelations".');
+  }
+
+  return $relation;
+}
+
+/**
+ * Simple resolver for Peer class
+ * The Peer name is already stored as a constant in the class 
+ *
+ * @param string $class the class name
+ * @return string       the peer class name
+ */
+function getPeerNameForClass($class)
+{
+  if (!class_exists($class))
+  {
+    throw new Exception('Unable to retreive Peer! Baseclass "'.$class.'" does not exist!');
+  }
+  
+  $peerName = constant($class.'::PEER');
+  
+  return $peerName;
+}
+
+
+
+/**
  * Resolves the (last) ClassName from the objectPath
  *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
+ * @param string $objectPath an objectPath, with syntax baseClassName.RelationName.RelationName...
+ *                           the RelationNames should be defined in the peer::getRelations method
  * @return string            the ClassName
  */
 function resolveClassNameFromObjectPath($objectPath)
 {
   // get the latest classReference (the part after the last '.')
-  $classRelations = explode('.', $objectPath);
-  $lastClassReference = $classRelations[count($classRelations)-1];
+  $parts = explode('.', $objectPath, 2);
 
-  // if there are multiple references to the same table, remove the RelatedBy.... part
-  $classParts = explode('RelatedBy', $lastClassReference);
-  $className = $classParts[0];
-
-  // if ClassnameS (with s) provided, remove s (but check if this is valid)
-  if (!class_exists($className)
-      &&
-      substr($className, -1) == 's') // check last character = s
+  // if no parts, we have an error
+  if (count($parts) == 0)
   {
-    $className = substr($className, 0, -1); //remove the s from the string
-  }
-
-  if (!class_exists($className))
+    throw new InvalidArgumentException('empty objectPath provided'); 
+  }  
+  
+  // if only one part, we have found the class Name
+  if (count($parts) == 1)
   {
-    throw new UnexpectedValueException(sprintf('Classname cannot be resolved! ObjectPath "%s" results in invalid classname "%s".', $objectPath, $className));
+    return $parts[0];
   }
+  
+  list($baseClass, $relationPath) = $parts;
+  $basePeer = getPeerNameForClass($baseClass);
+  
+  $relationNames = explode('.', $relationPath);
+  $relationName = array_shift($relationNames);
+  
+  $relations = call_user_func(array($basePeer, 'getRelations'));
 
-  return $className;
+  if (isset($relations[$relationName]))
+  {
+    $relation = $relations[$relationName];
+  }
+  else 
+  {
+    throw new Exception('No relation "'.$relationName.'" has been defined in the (base)"'.$basePeer.'"-method "getRelations".');
+  }
+  
+  array_unshift($relationNames, $relation['relatedClass']);
+  $newObjectPath = implode('.', $relationNames);
+  
+  // recursively call till only one left;
+  return resolveClassNameFromObjectPath($newObjectPath);
 }
 
+/**
+ * Simple helper that converts a propertyPath to a ObjectPath, by
+ * simply adding the baseClass in front, and removing the propertyname on the end 
+ *
+ * @param string $baseClass     the BaseClass
+ * @param string $propertyPath  the complete propertyPath
+ * @return string               the ObjectPath
+ */
 function getObjectPathFromProperyPath($baseClass, $propertyPath)
 {
   //remove property from propertyPath
@@ -360,48 +261,21 @@ function translatePropertyPathToAliasedColumn($baseClass, $propertyPath)
   return $aliasedColumn.'.'.$property;
 }
 
-
 /**
- * Resolves the Add-method for the first relation in an objectPath
+ * returns an array of Classes refered to by the objectPath
  *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
- * @return string            the add-Method of the child to register itself to its parent
- */
-//TODO: this should automatically find add / set
-function resolveFirstMethodForObjectPath($objectPath)
-{
-  // get the latest classReference (the part after the last '.')
-  $classRelations = explode('.', $objectPath);
-  $className = $classRelations[0];
-//  $classReference = $classRelations[count($classRelations)-1];
-
-  $related = '';
-  // if there are multiple references to the same table, remove the RelatedBy.... part
-  $classParts = explode('RelatedBy', $classRelations[1]);
-  if (count($classParts)>1)
-  {
-    $related = 'RelatedBy'.$classParts[1];
-  }
-
-  return $className.$related;
-}
-
-/**
- * returns an array of Classes refered to by an objectPath
- *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
+ * @param string $objectPath an objectPath, with syntax baseClassName.RelationName.RelationName...
+ *                           the RelationNames should be defined in the peer::getRelations method
  * @param array $classes     an instance of the classes to be returned, that will be complemented
  * @param string $parent     the parent of the current objectPath
  * @return array
  */
-function resolveAllClasses($objectPath, $classes = array(), $parent = '')
+function flattenAllClasses($objectPath, $classes = array(), $parent = '')
 {
   $classRelations = explode('.', $objectPath, 2);
   $relationName = $parent.$classRelations[0];
 
-  // add Class to array, if not already known
+  // add alliased Class to array, if not already known
   if (!isset($classes[$relationName]))
   {
     $classes[$relationName] = array('className' =>  resolveClassNameFromObjectPath($classRelations[0]),
@@ -419,17 +293,17 @@ function resolveAllClasses($objectPath, $classes = array(), $parent = '')
       $classes[$relationName]['relatedTo'][] = $relatedTo;
     }
 
-    $classes = resolveAllClasses($classRelations[1], $classes, $relationName.'_');
+    $classes = flattenAllClasses($classRelations[1], $classes, $relationName.'_');
   }
 
   return $classes;
 }
 
 /**
- * Enter description here...
+ * Simply returns the base class in this path
  *
- * @param string $objectPath an objectPath, with syntax baseClassName.ChildClassName.ChildClassName
- *                           the childClassNames should have a getter in the baseClass
+ * @param string $objectPath an objectPath, with syntax baseClassName.RelationName.RelationName...
+ *                           the RelationNames should be defined in the peer::getRelations method
  * @return string            the base class for this path
  */
 function resolveBaseClass($objectPath)
@@ -481,7 +355,7 @@ function resolveBaseClass($objectPath)
  *
  * @throws LogicException            Throws an exception if the source is a
  *                                   string, but not an existing Propel class name
- * @throws UnexpectedValueException  Throws an exception if the select source is
+ * @throws InvalidArgumentException  Throws an exception if the select source is
  *                                   a Criteria, but is missing a count Criteria
  * @throws InvalidArgumentException  Throws an exception if the source is
  *                                   neither a valid propel model class name
@@ -515,7 +389,10 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
     checkObjectPath($objectPath);
 
     // get flat array of classes that need to get hydrated
-    $classes =  resolveAllClasses($objectPath, $classes);
+    $classes =  flattenAllClasses($objectPath, $classes);
+    
+    var_dump($classes);
+    die();
   }
 
   // construct full hydration-profile
@@ -638,7 +515,7 @@ function hydrate($criteria = null, $objectPaths, $connection = null)
   // pre-process classnames and there mutual relations
   foreach ($objectPaths as $objectPath)
   {
-    $classes = resolveAllClasses($objectPath, $classes);
+    $classes = flattenAllClasses($objectPath, $classes);
   }
   //remove the base class from the list, since this is hydrated by default
   array_shift($classes);

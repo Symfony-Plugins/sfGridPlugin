@@ -402,6 +402,10 @@ class sfDataSourcePropel extends sfDataSource
   {
     if (!in_array($objectPath, $this->objectPaths))
     {
+      sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
+      checkObjectPath($objectPath);
+      
+      // add valid objectPath to array
       $this->objectPaths[] = $objectPath;
     }
   }

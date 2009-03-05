@@ -22,6 +22,8 @@ class SfPeerBuilderDS extends SfPeerBuilder
     
     $this->addGetCustomColumns($script);
     $this->addAddCustomSelectColumns($script);
+    
+    $this->addGetRelations($script);
 
     parent::addSelectMethods($script);
   }
@@ -97,6 +99,82 @@ class SfPeerBuilderDS extends SfPeerBuilder
     }
   }
 ";
-  } // addAddCustomSelectColumns()  
+  } // addAddCustomSelectColumns()
+
+  
+  protected function addGetRelations(&$script)
+  {
+    $table = $this->getTable();
+    $thisTableObjectBuilder = $this->getNewObjectBuilder($table);
+    
+    $relations = array();
+    //find all foreignKeys from this table
+    foreach ($table->getForeignKeys() as $fk)
+    {
+      $relationName = $thisTableObjectBuilder->getFKPhpNameAffix($fk, $plural = false);
+      $joinTable = $table->getDatabase()->getTable($fk->getForeignTableName());
+      $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
+      $joinedTablePeerBuilder = $this->getNewPeerBuilder($joinTable);
+      $joinClassName = $joinedTableObjectBuilder->getObjectClassname();
+      
+      $lfMap = $fk->getLocalForeignMapping();
+      $leftKeys = array();
+      $rightKeys = array();
+      foreach ($fk->getLocalColumns() as $columnName ) {
+        array_push($leftKeys,  $this->getColumnConstant($table->getColumn($columnName) ) );
+        array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn( $lfMap[$columnName] ) ) );
+      }
+      
+      $relations[$relationName] = array(
+        'relatedClass' => $joinClassName,
+        'oneToMany' => false,
+        'leftKeys'  => $leftKeys,
+        'rightKeys' => $rightKeys,
+        'joinType'  => $this->getJoinBehavior(),
+      );
+    }
+    
+    //find all foreignKeys to this table, from other tables
+    foreach ($this->getTable()->getReferrers() as $refFK) {
+      if (!$refFK->isLocalPrimaryKey()) {
+        $joinTable = $refFK->getTable();
+        
+        $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
+         
+        $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
+        $joinedTablePeerBuilder = $this->getNewPeerBuilder($joinTable);
+        $joinClassName = $joinedTableObjectBuilder->getObjectClassname();
+        
+        $relationName = $joinedTableObjectBuilder->getRefFKPhpNameAffix($refFK, $plural = true);
+        
+        $lfMap = $refFK->getLocalForeignMapping();
+        $leftKeys = array();
+        $rightKeys = array();
+        foreach ($refFK->getLocalColumns() as $foreignColumnName) {
+          array_push($leftKeys,  $this->getColumnConstant($table->getColumn( $lfMap[$foreignColumnName] ) ) );
+          array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn($foreignColumnName) ) );
+        }
+        
+        $relations[$relationName] = array( 
+          'relatedClass' => $joinClassName,
+          'oneToMany' => true,
+          'leftKeys'  => $leftKeys,
+          'rightKeys' => $rightKeys,
+          'joinType'  => $this->getJoinBehavior(),
+        );
+      }
+    }
+
+    $relations = var_export($relations, true);
+
+    $script .= <<<EOF
+
+
+  static public function getRelations()
+  {
+    return $relations;
+  }
+EOF;
+  }  
   
 }
