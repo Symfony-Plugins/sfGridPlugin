@@ -273,27 +273,39 @@ function translatePropertyPathToAliasedColumn($baseClass, $propertyPath)
 function flattenAllClasses($objectPath, $classes = array(), $parent = '')
 {
   $classRelations = explode('.', $objectPath, 2);
-  $relationName = $parent.$classRelations[0];
+  $className = $classRelations[0];
+  
+  if ($parent == '')
+  {
+    $parent = $className; 
+  }
+  $relationName = $parent;
 
   // add alliased Class to array, if not already known
   if (!isset($classes[$relationName]))
   {
-    $classes[$relationName] = array('className' =>  resolveClassNameFromObjectPath($classRelations[0]),
+    $classes[$relationName] = array('className' =>  $className,
                                     'relatedTo' => array()
     );
   }
 
+  // if relations left, add these
   if (isset($classRelations[1]))
   {
-    $relatedClassRelations = explode('.', $classRelations[1], 2);
+    $relationNames = explode('.', $classRelations[1]);
 
-    $relatedTo = $relatedClassRelations[0];
+    $relatedTo = array_shift($relationNames);
     if (!in_array($relatedTo, $classes[$relationName]['relatedTo']))
     {
       $classes[$relationName]['relatedTo'][] = $relatedTo;
     }
+    
+    $relatedClass = resolveClassNameFromObjectPath($className.'.'.$relatedTo);
+    array_unshift($relationNames, $relatedClass);
+    
+    $newObjectPath = implode('.', $relationNames);
 
-    $classes = flattenAllClasses($classRelations[1], $classes, $relationName.'_');
+    $classes = flattenAllClasses($newObjectPath, $classes, $relationName.'_'.$relatedTo);
   }
 
   return $classes;
@@ -315,7 +327,6 @@ function resolveBaseClass($objectPath)
 
 /**
  * addJoins.
- * TODO: add support for inner/strict/right joins as well!
  *
  * The data source can be given as an (array of) objectPaths, or a custom
  * Criteria object. Custom criteria objects will not get hydrated, objects
@@ -363,6 +374,7 @@ function resolveBaseClass($objectPath)
  */
 function addJoins($criteria = null, $objectPaths, $withColumns = true)
 {
+  // clone criteria, since we are going to modify it
   $criteria = clone $criteria;
 
   // if the source is provided as object paths, create hydratable criteria
@@ -376,33 +388,29 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
   $baseClass = resolveBaseClass($objectPaths[0]);
   $basePeer = getPeerNameForClass($baseClass);
 
+  // construct complete class-overview of all combined objectPaths
   foreach ($objectPaths as $objectPath)
   {
-    // validation checks @todo: this can be skipped in production
     // test if there is only one base class
     if ($baseClass != ($currentBaseClass = resolveBaseClass($objectPath)))
     {
       throw new LogicException(sprintf('Not all base classes are the same.
                                         Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
     }
-    // test if relations are valid
-    checkObjectPath($objectPath);
 
     // get flat array of classes that need to get hydrated
     $classes =  flattenAllClasses($objectPath, $classes);
-    
-    var_dump($classes);
-    die();
   }
-
+  
   // construct full hydration-profile
   $criteria->setDbName(constant($basePeer.'::DATABASE_NAME'));
 
   // process all classes
-  foreach ($classes as $alias => &$class)
+  foreach ($classes as $alias => $class)
   {
-    // TODO: should I start with the base $class??? in that case do it before the foreach and skip base in foreach
     $peer = getPeerNameForClass($class['className']);
+    
+    $relations = call_user_func(array($peer, 'getRelations'));
 
     //add alias for tables
     $criteria->addAlias($alias, constant($peer.'::TABLE_NAME'));
@@ -415,70 +423,39 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
     // this always has to be done, since you might want to filter on these columns
     call_user_func_array(array($peer, 'addCustomSelectColumns'), array($criteria, $alias));
 
-    // get TableMap for base
-    $baseTM = call_user_func(array($peer, 'getTableMap'));
-
     //join related
     foreach ($class['relatedTo'] as $relatedTo)
     {
       $relatedAlias = $alias.'_'.$relatedTo;
       $relatedPeer = getPeerNameForClass($classes[$relatedAlias]['className']);
-      // get TableMap for related
-      $relatedTM = call_user_func_array(array($relatedPeer, 'getTableMap'), array());
 
-      $relatedPKs = $relatedTM->getPrimaryKeyColumns();
-
-      $baseFKNames = array();
-      $i=0;
-      foreach ($relatedPKs as $relatedPK)
+      if ($relatedTo = 'sfGuardUserProfilesRelatedByUserId') 
       {
-        //count the number of iterations
-        $i++;
-
-        $relatedPKName = $relatedPK->getColumnName();
-
-        // search for relation (BaseTable-ForeignKey / ForeignTable-PrimaryKey)
-        $RelatedByArr = explode('RelatedBy', $relatedTo, 2);
-        foreach ($baseTM->getColumns() as $relatedColumn)
-        {
-          // if one foreign key refering from baseTable to RelatedTable
-          if (count($RelatedByArr)==1)
-          {
-            $colRelTableName = $relatedColumn->getRelatedTableName();
-            if ((!empty($colRelTableName)) && ($baseTM->getDatabaseMap()->containsTable($colRelTableName)) && ($baseTM->getDatabaseMap()->getTable($colRelTableName)->getPhpName() == $RelatedByArr[0]))
-            {
-              $baseFKNames[] = $relatedColumn->getName();
-              break; // stop iterating
-            }
-          }
-          // if multiple foreign keys refering from baseTable to RelatedTable
-          else
-          {
-            if ($relatedColumn->getPhpName() == $RelatedByArr[1])
-            {
-              $baseFKNames[] = $relatedColumn->getName();
-              break;
-            }
-          }
-        }
-
-
-        //TODO: reverse lookup (per table) to fix hack from above
-        if (count($baseFKNames) < $i)
-        {
-
-          foreach ($baseTM->getColumns() as $relatedColumn);
-          // TODO HIER BEN IK
-
-        }
-
-        $currentBaseFKName = $baseFKNames[count($baseFKNames)-1];
-        $joinColumnLeft  = call_user_func_array(array($peer, 'alias'), array($alias, constant($peer.'::'.$currentBaseFKName)));
-        $joinColumnRight = call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, constant($relatedPeer.'::'.$relatedPKName)));
-        $joinType = Criteria::LEFT_JOIN; //TODO: add lookup table that can define the joinType
-
-        $criteria->addJoin($joinColumnLeft, $joinColumnRight, $joinType);
+        var_dump($objectPaths);
+        var_dump($classes);
+        
+        echo($relatedTo);
+        var_dump($relations);
+        
+        echo "<br><br";
       }
+            
+      $relation = $relations[$relatedTo];
+
+      
+      $joinColumnsLeft = array();
+      $joinColumnsRight = array();
+      foreach ($relation['leftKeys'] as $field)
+      {
+        $joinColumnsLeft[] =  call_user_func_array(array($peer, 'alias'), array($alias, $field)); 
+      }
+      foreach ($relation['rightKeys'] as $field)
+      {
+        $joinColumnsRight[] =  call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, $field));
+      }
+      $joinType = $relation['joinType']; 
+
+      $criteria->addJoin($joinColumnsLeft, $joinColumnsRight, $joinType);
     }
   }
 

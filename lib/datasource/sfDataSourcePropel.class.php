@@ -220,6 +220,8 @@ class sfDataSourcePropel extends sfDataSource
 
       $criteria = addJoins($criteria, $this->objectPaths);
 
+      echo ($criteria->toString());
+      die('todo...');
       //TODO: split Joins and Selects
 //      $criteria = addSelects($criteria, $this->objectPaths);
 
