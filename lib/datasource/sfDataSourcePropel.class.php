@@ -218,10 +218,10 @@ class sfDataSourcePropel extends sfDataSource
       // we're going to modify criteria, so copy it first
       $criteria = clone $this->selectCriteria;
 
-      $criteria = addJoins($criteria, $this->objectPaths);
+      $criteria = addJoinsAndSelectColumns($criteria, $this->objectPaths);
 
-      echo ($criteria->toString());
-      die('todo...');
+//      echo ($criteria->toString());
+//      die('todo...');
       //TODO: split Joins and Selects
 //      $criteria = addSelects($criteria, $this->objectPaths);
 
@@ -291,6 +291,11 @@ class sfDataSourcePropel extends sfDataSource
         if (isset($result))
         {
           $result = call_user_func(array($result, 'get'.$getter));
+          // TODO: HACK for one-to-many currenlty only the first related gets iterated
+          if (is_array($result))
+          {
+            $result = array_shift($result);
+          }
         }
         else
         {
@@ -406,7 +411,7 @@ class sfDataSourcePropel extends sfDataSource
     {
       sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
       checkObjectPath($objectPath);
-      
+
       // add valid objectPath to array
       $this->objectPaths[] = $objectPath;
     }

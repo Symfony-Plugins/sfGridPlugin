@@ -66,10 +66,10 @@ function checkObjectPath($objectPath)
     $relationPath = $baseClass.'.'.$relationName;
 
     $relatedClass = resolveClassNameFromObjectPath($relationPath);
-    
+
     $relation     = getRelationForRelationPath($relationPath);
-    
-    // (replace/)insert real ClassName at beginning of objectPath 
+
+    // (replace/)insert real ClassName at beginning of objectPath
     array_unshift($relatedClassRelations, $relation['relatedClass']);
     $newObjectPath = implode('.', $relatedClassRelations);
 
@@ -120,7 +120,7 @@ function checkPropertyPath($baseClass, $propertyPath)
  * @param string $relationPath  partial objectPath consisting of two objects
  *
  * @throws InvalidArgumentException  throws an InvalidArgumentException if something else than two parts have been provided in the path
- * @throws Exception                throws an Exception if relation cannot be found in the base peer class 
+ * @throws Exception                throws an Exception if relation cannot be found in the base peer class
  * @return array      array with relation information
  *
  */
@@ -134,14 +134,14 @@ function getRelationForRelationPath($relationPath)
 
   list($baseClass, $relationName) = $parts;
   $basePeer = getPeerNameForClass($baseClass);
-  
+
   $relations = call_user_func(array($basePeer, 'getRelations'));
 
   if (isset($relations[$relationName]))
   {
     $relation = $relations[$relationName];
   }
-  else 
+  else
   {
     throw new Exception('No relation "'.$relationName.'" has been defined in the (base)"'.$basePeer.'"-method "getRelations".');
   }
@@ -151,7 +151,7 @@ function getRelationForRelationPath($relationPath)
 
 /**
  * Simple resolver for Peer class
- * The Peer name is already stored as a constant in the class 
+ * The Peer name is already stored as a constant in the class
  *
  * @param string $class the class name
  * @return string       the peer class name
@@ -162,9 +162,9 @@ function getPeerNameForClass($class)
   {
     throw new Exception('Unable to retreive Peer! Baseclass "'.$class.'" does not exist!');
   }
-  
+
   $peerName = constant($class.'::PEER');
-  
+
   return $peerName;
 }
 
@@ -185,42 +185,42 @@ function resolveClassNameFromObjectPath($objectPath)
   // if no parts, we have an error
   if (count($parts) == 0)
   {
-    throw new InvalidArgumentException('empty objectPath provided'); 
-  }  
-  
+    throw new InvalidArgumentException('empty objectPath provided');
+  }
+
   // if only one part, we have found the class Name
   if (count($parts) == 1)
   {
     return $parts[0];
   }
-  
+
   list($baseClass, $relationPath) = $parts;
   $basePeer = getPeerNameForClass($baseClass);
-  
+
   $relationNames = explode('.', $relationPath);
   $relationName = array_shift($relationNames);
-  
+
   $relations = call_user_func(array($basePeer, 'getRelations'));
 
   if (isset($relations[$relationName]))
   {
     $relation = $relations[$relationName];
   }
-  else 
+  else
   {
     throw new Exception('No relation "'.$relationName.'" has been defined in the (base)"'.$basePeer.'"-method "getRelations".');
   }
-  
+
   array_unshift($relationNames, $relation['relatedClass']);
   $newObjectPath = implode('.', $relationNames);
-  
+
   // recursively call till only one left;
   return resolveClassNameFromObjectPath($newObjectPath);
 }
 
 /**
  * Simple helper that converts a propertyPath to a ObjectPath, by
- * simply adding the baseClass in front, and removing the propertyname on the end 
+ * simply adding the baseClass in front, and removing the propertyname on the end
  *
  * @param string $baseClass     the BaseClass
  * @param string $propertyPath  the complete propertyPath
@@ -274,10 +274,13 @@ function flattenAllClasses($objectPath, $classes = array(), $parent = '')
 {
   $classRelations = explode('.', $objectPath, 2);
   $className = $classRelations[0];
-  
+  $peer = getPeerNameForClass($className);
+
+  $relations = call_user_func(array($peer, 'getRelations')); //TODO: find correct peer and move
+
   if ($parent == '')
   {
-    $parent = $className; 
+    $parent = $className;
   }
   $relationName = $parent;
 
@@ -295,17 +298,45 @@ function flattenAllClasses($objectPath, $classes = array(), $parent = '')
     $relationNames = explode('.', $classRelations[1]);
 
     $relatedTo = array_shift($relationNames);
-    if (!in_array($relatedTo, $classes[$relationName]['relatedTo']))
+    if (!array_key_exists($relatedTo, $classes[$relationName]['relatedTo']))
     {
-      $classes[$relationName]['relatedTo'][] = $relatedTo;
+      $classes[$relationName]['relatedTo'][$relatedTo] = $relations[$relatedTo];
     }
-    
+
     $relatedClass = resolveClassNameFromObjectPath($className.'.'.$relatedTo);
     array_unshift($relationNames, $relatedClass);
-    
+
     $newObjectPath = implode('.', $relationNames);
 
-    $classes = flattenAllClasses($newObjectPath, $classes, $relationName.'_'.$relatedTo);
+    $classes = flattenAllClasses($newObjectPath, $classes, $relationName.'.'.$relatedTo);
+  }
+
+  return $classes;
+}
+
+/**
+ * FlatternsAllClasses from an array
+ *
+ * @param array[string] $objectPaths    an array of objectPaths
+ * @return array                        an array of Classes derived from the objectPaths
+ */
+function flattenAllClassesArray($objectPaths)
+{
+  $classes = array();
+  $baseClass = resolveBaseClass($objectPaths[0]);
+
+  // construct complete class-overview of all combined objectPaths
+  foreach ($objectPaths as $objectPath)
+  {
+    // test if there is only one base class
+    if ($baseClass != ($currentBaseClass = resolveBaseClass($objectPath)))
+    {
+      throw new LogicException(sprintf('Not all base classes are the same.
+                                        Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
+    }
+
+    // get flat array of classes that need to get hydrated
+    $classes =  flattenAllClasses($objectPath, $classes);
   }
 
   return $classes;
@@ -323,6 +354,16 @@ function resolveBaseClass($objectPath)
   $classRelations = explode('.', $objectPath, 2);
 
   return $classRelations[0];
+}
+
+
+/**
+ * @see addJoins()
+ *
+ */
+function addJoinsAndSelectColumns(Criteria $criteria = null, $objectPaths)
+{
+  return addJoins($criteria, $objectPaths, true);
 }
 
 /**
@@ -358,9 +399,9 @@ function resolveBaseClass($objectPath)
  * </code>
  *
  * @param Criteria $criteria         The Criteria Object to add the selected-columns and joins to
- * @param array $objectPaths         The data source (a select Criteria, or an
- *                                   (array of) object Path(s)
- * @param bool $withColumns          add Select Columns to the criteria (usefull to disable for counts, where you only want joins)
+ * @param array $objectPaths         an array of object Paths
+ * @param bool $withColumns          add Select Columns to the criteria
+ *                                   When enabled also the select columns will be added to the criteria, see
  *
  * @return Criteria                  The criteria object, with the added selected-columns and joins
  *
@@ -372,7 +413,7 @@ function resolveBaseClass($objectPath)
  *                                   neither a valid propel model class name
  *                                   nor a Criteria.
  */
-function addJoins($criteria = null, $objectPaths, $withColumns = true)
+function addJoins(Criteria $criteria = null, $objectPaths, $withColumns = false)
 {
   // clone criteria, since we are going to modify it
   $criteria = clone $criteria;
@@ -380,37 +421,29 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
   // if the source is provided as object paths, create hydratable criteria
   if (!is_array($objectPaths))
   {
-    throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
+    throw new InvalidArgumentException('No ObjectPaths provided (this should be an array)');
   }
 
   // generate an array of classes to be retrieved from DB
-  $classes = array();
   $baseClass = resolveBaseClass($objectPaths[0]);
   $basePeer = getPeerNameForClass($baseClass);
 
-  // construct complete class-overview of all combined objectPaths
-  foreach ($objectPaths as $objectPath)
-  {
-    // test if there is only one base class
-    if ($baseClass != ($currentBaseClass = resolveBaseClass($objectPath)))
-    {
-      throw new LogicException(sprintf('Not all base classes are the same.
-                                        Resolved "%s", while expecting "%s"', $currentBaseClass, $baseClass));
-    }
-
-    // get flat array of classes that need to get hydrated
-    $classes =  flattenAllClasses($objectPath, $classes);
-  }
-  
   // construct full hydration-profile
   $criteria->setDbName(constant($basePeer.'::DATABASE_NAME'));
 
+  // We need to set the primary table name, since in the case that there are no WHERE columns
+  // it will be impossible for the BasePeer::createSelectSql() method to determine which
+  // tables go into the FROM clause.
+  $criteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME'));
+
+  // construct complete class-overview of all combined objectPaths
+  $classes = flattenAllClassesArray($objectPaths);
+
   // process all classes
-  foreach ($classes as $alias => $class)
+  foreach ($classes as $baseObjectPath => $class)
   {
+    $alias = str_replace('.', '_', $baseObjectPath);
     $peer = getPeerNameForClass($class['className']);
-    
-    $relations = call_user_func(array($peer, 'getRelations'));
 
     //add alias for tables
     $criteria->addAlias($alias, constant($peer.'::TABLE_NAME'));
@@ -424,36 +457,24 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
     call_user_func_array(array($peer, 'addCustomSelectColumns'), array($criteria, $alias));
 
     //join related
-    foreach ($class['relatedTo'] as $relatedTo)
+    foreach ($class['relatedTo'] as $relatedTo => $relation)
     {
-      $relatedAlias = $alias.'_'.$relatedTo;
-      $relatedPeer = getPeerNameForClass($classes[$relatedAlias]['className']);
+      $objectPath = $baseObjectPath.'.'.$relatedTo;
+      $relatedAlias = str_replace('.', '_', $objectPath);
 
-      if ($relatedTo = 'sfGuardUserProfilesRelatedByUserId') 
-      {
-        var_dump($objectPaths);
-        var_dump($classes);
-        
-        echo($relatedTo);
-        var_dump($relations);
-        
-        echo "<br><br";
-      }
-            
-      $relation = $relations[$relatedTo];
+      $relatedPeer = getPeerNameForClass($classes[$objectPath]['className']);
 
-      
       $joinColumnsLeft = array();
       $joinColumnsRight = array();
       foreach ($relation['leftKeys'] as $field)
       {
-        $joinColumnsLeft[] =  call_user_func_array(array($peer, 'alias'), array($alias, $field)); 
+        $joinColumnsLeft[] =  call_user_func_array(array($peer, 'alias'), array($alias, $field));
       }
       foreach ($relation['rightKeys'] as $field)
       {
         $joinColumnsRight[] =  call_user_func_array(array($relatedPeer, 'alias'), array($relatedAlias, $field));
       }
-      $joinType = $relation['joinType']; 
+      $joinType = $relation['joinType'];
 
       $criteria->addJoin($joinColumnsLeft, $joinColumnsRight, $joinType);
     }
@@ -472,30 +493,34 @@ function addJoins($criteria = null, $objectPaths, $withColumns = true)
  * hydrates the data for the objects in the objectPaths from the database
  * and places them in an array.
  *
- * @param Criteria $criteria
- * @param array[string] $objectPaths
- * @param PDO $connection
+ * @param Criteria $criteria          The criteria object, matching the provided objectPaths (see addJoins)
+ * @param array[string] $objectPaths  the objectPaths, related to the criteria
+ * @param PDO $connection             a PDO connection to perform the query with
  *
- * @return array        the array of hydrated (base)objects, with there relations
+ * @return array        the array of hydrated (base)objects, with there relation (from the objectPaths)
  */
-function hydrate($criteria = null, $objectPaths, $connection = null)
+function hydrate(Criteria $criteria, $objectPaths, $connection = null)
 {
   // data holds all main results
   $data = array();
 
+  // if the source is provided as object paths, create hydratable criteria
+  if (!is_array($objectPaths))
+  {
+    throw new InvalidArgumentException('No ObjectPaths provided (this should be an array)');
+  }
+
+  // execute query
   $stmt = BasePeer::doSelect($criteria, $connection);
   $results = $stmt->fetchAll(PDO::FETCH_NUM);
 
+  // construct complete class-overview of all combined objectPaths
+  $classes = flattenAllClassesArray($objectPaths);
+
+  //remove the base class from the list, since this is hydrated first by default
+  array_shift($classes);
   $baseClass = resolveBaseClass($objectPaths[0]);
   $basePeer = getPeerNameForClass($baseClass);
-  $classes = array();
-  // pre-process classnames and there mutual relations
-  foreach ($objectPaths as $objectPath)
-  {
-    $classes = flattenAllClasses($objectPath, $classes);
-  }
-  //remove the base class from the list, since this is hydrated by default
-  array_shift($classes);
 
   // hydrate all (related)objects with the resultset
   foreach ($results as $row)
@@ -516,8 +541,8 @@ function hydrate($criteria = null, $objectPaths, $connection = null)
     // calculate startCol in row for first related class
     $startcol += constant($basePeer.'::NUM_COLUMNS') - constant($basePeer.'::NUM_LAZY_LOAD_COLUMNS');
 
-    //hydrate related objects
-    foreach ($classes as $path => $relatedClass)
+    // process all related-classes
+    foreach ($classes as $objectPath => $relatedClass)
     {
       $relatedClassName = $relatedClass['className'];
       $relatedPeer = getPeerNameForClass($relatedClassName);
@@ -536,27 +561,62 @@ function hydrate($criteria = null, $objectPaths, $connection = null)
           call_user_func_array(array($relatedPeer, 'addInstanceToPool'), array($relatedObj, $key));
         }
 
-        $paths = explode('_', $path);// @TODO: check if exploding if _ is always OK...
-        $nrPaths = count($paths);
-        $addMethod = 'add'.resolveFirstMethodForObjectPath($paths[$nrPaths-2].'.'.$paths[$nrPaths-1]);
+        $parts = explode('.', $objectPath);
+        $last_relation = array_pop($parts);
+        $objPath = implode('.', $parts);
+        $parentClass = resolveClassNameFromObjectPath($objPath);
+        $parentPeer = getPeerNameForClass($parentClass);
 
+        $parentRelations = call_user_func(array($parentPeer, 'getRelations'));
+        $relation = $parentRelations[$last_relation];
+
+        $associateMethod = $relation['associateMethod'];
+
+        // find parent instance
         $parent = $instance;
-        // remove base object and getter from path
-        array_shift($paths); array_pop($paths);
-        foreach ($paths as $getMethod)
+        // remove base object from path
+        array_shift($parts);
+        foreach ($parts as $getMethod)
         {
           $parent = call_user_func(array($parent, 'get'.$getMethod));
         }
-        call_user_func_array(array($relatedObj, $addMethod), array($parent));
+        // in case of one-to-many, find real parent
+        if (is_array($parent))
+        {
+          foreach ($parent as $p)
+          {
+//            if (//TODO find the parent, now taking the first in case of one-to-many!!!)
+//            {
+              $parent = $p;
+              break;
+//            }
+          }
+        }
+        // associate related object to parent
+        call_user_func_array(array($relatedObj, $associateMethod), array($parent));
       }
 
       // add column-count to startcol for next object
       $startcol += constant($relatedPeer.'::NUM_COLUMNS') - constant($relatedPeer.'::NUM_LAZY_LOAD_COLUMNS');
     }
 
+    // hydrate custom columns and add them to base TODO: hydrate customs per class
     $instance->hydrateCustomColumns($row, $startcol, $criteria);
 
-    $data[] = $instance;
+    // add new instances (including all relations) to the data array (existing instances are already updated)
+    $new = true;
+    foreach ($data as $oldInstance)
+    {
+      if ($oldInstance === $instance)
+      {
+        $new = false;
+        break;
+      }
+    }
+    if ($new)
+    {
+      $data[] = $instance;
+    }
   }
 
   $stmt->closeCursor();
@@ -567,7 +627,6 @@ function hydrate($criteria = null, $objectPaths, $connection = null)
 
 /**
  * Counts the number of results for the generated query
- * TODO: add support for inner/strict/right joins as well!
  *
  * @param Criteria $criteria
  * @param array[string] $objectPaths
@@ -588,14 +647,7 @@ function countAll($criteria, $objectPaths, $connection = null)
   $criteria->setLimit(-1);          // LIMIT affects the count negative
   $criteria->setOffset(0);          // OFFSET affects the count negative
 
-  // We need to set the primary table name, since in the case that there are no WHERE columns
-  // it will be impossible for the BasePeer::createSelectSql() method to determine which
-  // tables go into the FROM clause.
-  $criteria->setPrimaryTableName(constant($basePeer.'::TABLE_NAME'));
-  $criteria->addAlias($alias, constant($basePeer.'::TABLE_NAME'));
-
-  $criteria = addJoins($criteria, $objectPaths, false);
-
+  $criteria = addJoins($criteria, $objectPaths);
 
   if (!$criteria->hasSelectClause())
   {

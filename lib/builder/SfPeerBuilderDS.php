@@ -19,10 +19,10 @@ class SfPeerBuilderDS extends SfPeerBuilder
   protected function addSelectMethods(&$script)
   {
     $this->addAddSelectColumnsAliased($script);
-    
+
     $this->addGetCustomColumns($script);
     $this->addAddCustomSelectColumns($script);
-    
+
     $this->addGetRelations($script);
 
     parent::addSelectMethods($script);
@@ -76,7 +76,7 @@ class SfPeerBuilderDS extends SfPeerBuilder
   }
 ";
   } // addGetCustomColumns()
-  
+
   /**
    * Adds the addCustomSelectColumns() method.
    * @param      string &$script The script will be modified in this method.
@@ -101,12 +101,12 @@ class SfPeerBuilderDS extends SfPeerBuilder
 ";
   } // addAddCustomSelectColumns()
 
-  
+
   protected function addGetRelations(&$script)
   {
     $table = $this->getTable();
     $thisTableObjectBuilder = $this->getNewObjectBuilder($table);
-    
+
     $relations = array();
     //find all foreignKeys from this table
     foreach ($table->getForeignKeys() as $fk)
@@ -116,51 +116,53 @@ class SfPeerBuilderDS extends SfPeerBuilder
       $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
       $joinedTablePeerBuilder = $this->getNewPeerBuilder($joinTable);
       $joinClassName = $joinedTableObjectBuilder->getObjectClassname();
-      
+
       $lfMap = $fk->getLocalForeignMapping();
       $leftKeys = array();
       $rightKeys = array();
       foreach ($fk->getLocalColumns() as $columnName ) {
-        array_push($leftKeys,  $this->getColumnConstant($table->getColumn($columnName) ) );
-        array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn( $lfMap[$columnName] ) ) );
+        array_push($leftKeys,  constant($this->getColumnConstant($table->getColumn($columnName))) );
+        array_push($rightKeys, constant($joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn( $lfMap[$columnName]))) );
       }
-      
+
       $relations[$relationName] = array(
         'relatedClass' => $joinClassName,
         'oneToMany' => false,
+        'associateMethod' => 'add'.$joinedTableObjectBuilder->getRefFKPhpNameAffix($fk, $plural = false),
         'leftKeys'  => $leftKeys,
         'rightKeys' => $rightKeys,
-        'joinType'  => $this->getJoinBehavior(),
+        'joinType'  => constant($this->getJoinBehavior()),
       );
     }
-    
+
     //find all foreignKeys to this table, from other tables
     foreach ($this->getTable()->getReferrers() as $refFK) {
       if (!$refFK->isLocalPrimaryKey()) {
         $joinTable = $refFK->getTable();
-        
+
         $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
-         
+
         $joinedTableObjectBuilder = $this->getNewObjectBuilder($joinTable);
         $joinedTablePeerBuilder = $this->getNewPeerBuilder($joinTable);
         $joinClassName = $joinedTableObjectBuilder->getObjectClassname();
-        
+
         $relationName = $joinedTableObjectBuilder->getRefFKPhpNameAffix($refFK, $plural = true);
-        
+
         $lfMap = $refFK->getLocalForeignMapping();
         $leftKeys = array();
         $rightKeys = array();
         foreach ($refFK->getLocalColumns() as $foreignColumnName) {
-          array_push($leftKeys,  $this->getColumnConstant($table->getColumn( $lfMap[$foreignColumnName] ) ) );
-          array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn($foreignColumnName) ) );
+          array_push($leftKeys,  constant($this->getColumnConstant($table->getColumn( $lfMap[$foreignColumnName]))) );
+          array_push($rightKeys, constant($joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn($foreignColumnName))) );
         }
-        
-        $relations[$relationName] = array( 
+
+        $relations[$relationName] = array(
           'relatedClass' => $joinClassName,
           'oneToMany' => true,
+          'associateMethod' => 'set'.$thisTableObjectBuilder->getFKPhpNameAffix($refFK, $plural = false),
           'leftKeys'  => $leftKeys,
           'rightKeys' => $rightKeys,
-          'joinType'  => $this->getJoinBehavior(),
+          'joinType'  => constant($this->getJoinBehavior()),
         );
       }
     }
@@ -175,6 +177,6 @@ class SfPeerBuilderDS extends SfPeerBuilder
     return $relations;
   }
 EOF;
-  }  
-  
+  }
+
 }
