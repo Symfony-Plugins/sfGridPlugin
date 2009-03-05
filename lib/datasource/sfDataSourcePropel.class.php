@@ -175,13 +175,13 @@ class sfDataSourcePropel extends sfDataSource
     {
       throw new InvalidArgumentException('The source must be an instance of Criteria or a propel class name');
     }
-    
+
     $this->init();
   }
-  
+
   /**
    * Customisable init function
-   * 
+   *
    * this method is defined to make extending this class easy.
    *
    */
@@ -219,7 +219,7 @@ class sfDataSourcePropel extends sfDataSource
       $criteria = clone $this->selectCriteria;
 
       $criteria = addJoins($criteria, $this->objectPaths);
-      
+
       //TODO: split Joins and Selects
 //      $criteria = addSelects($criteria, $this->objectPaths);
 
@@ -365,7 +365,7 @@ class sfDataSourcePropel extends sfDataSource
     if ($this->baseClass != null)
     {
       sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-      
+
       $count = countAll($this->selectCriteria, $this->objectPaths, $this->connection);
     }
     // or in case we are using custom criteria objects for select and count
@@ -418,7 +418,7 @@ class sfDataSourcePropel extends sfDataSource
       // throws an exception if the property cannot be resolved
       checkPropertyPath($this->baseClass , $column);
 
-      $objectPath = getObjectPathForProperyPath($this->baseClass , $column);
+      $objectPath = getObjectPathFromProperyPath($this->baseClass , $column);
 
       $this->addObjectPath($objectPath);
     }
@@ -471,7 +471,7 @@ class sfDataSourcePropel extends sfDataSource
 
   /**
    * To be implemented in an extension
-   * 
+   *
    * return null to disable the default sorting
    *
    * @param string $column
@@ -482,14 +482,14 @@ class sfDataSourcePropel extends sfDataSource
   {
     return $column;
   }
-  
+
   /**
    * @see sfDataSource::doSort()
    */
   protected function doSort($column, $order)
   {
     sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-    
+
     // translate $column to propel column-name
     $column = translatePropertyPathToAliasedColumn($this->baseClass, $column);
 
@@ -510,7 +510,7 @@ class sfDataSourcePropel extends sfDataSource
           throw new Exception('sfDataSourcePropel::doSort() only accepts "'.sfDataSourceInterface::ASC.'" or "'.sfDataSourceInterface::DESC.'" as argument');
       }
     }
-    
+
     $this->refresh();
   }
 
@@ -520,7 +520,7 @@ class sfDataSourcePropel extends sfDataSource
   public function setFilter($fields)
   {
     sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
-    
+
     foreach ($fields as $propertyPath => $column)
     {
       $this->requireColumn($propertyPath);
@@ -533,7 +533,7 @@ class sfDataSourcePropel extends sfDataSource
 
       $value = $column['value'];
       $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
-      
+
       $this->selectCriteria->add($columnName, $value, $operator);
     }
   }
