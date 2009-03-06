@@ -8,6 +8,11 @@
  * file that was distributed with this source code.
  */
 
+//   - Currently a bug is there when filling relations of a one-to-many-child
+//   - Custom Columns are now only correctly hydrated for the base Object 
+//     (define them again in your peer, see peer::addCustomSelectColumns and object-hydrateCustomColumns)  
+
+
 /**
  * @package    symfony
  * @subpackage helper
@@ -57,6 +62,7 @@ function checkObjectPath($objectPath)
   //     - related by multiple pk/fk pairs:                                     RelatedTableName (pk/fk-pairs are automatically resolved)
   //     - directly related, but multiple relations from base to parent exist:  RelatedTableNameRelatedByForeignKeyName
   //     - reversely related (one-to-many):                                     RelatedTableNames (with the s)
+  //
   //   - NOT tested are self referencing relations (the issue with this is there depth is unknown)
   //   - NOT implemented is joining i18n related tables automatically.
   if (isset($classRelations[1]))
@@ -529,8 +535,10 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
 
     // hydration of the base object
     $key = call_user_func_array(array($basePeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
+    $new = false;
     if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null)
     {
+      $new = true;
       $omClass = call_user_func(array($basePeer, 'getOMClass'));
 
       $cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
@@ -603,16 +611,7 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
     // hydrate custom columns and add them to base TODO: hydrate customs per class
     $instance->hydrateCustomColumns($row, $startcol, $criteria);
 
-    // add new instances (including all relations) to the data array (existing instances are already updated)
-    $new = true;
-    foreach ($data as $oldInstance)
-    {
-      if ($oldInstance === $instance)
-      {
-        $new = false;
-        break;
-      }
-    }
+    // add new instances (including all relations) to the data array (existing instances are updated, no need to re-add them)
     if ($new)
     {
       $data[] = $instance;

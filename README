@@ -15,15 +15,28 @@ HOWTO
 
 A quick guide to show how to start using the sfGrid and sfDataSource(Propel) implementations.
 
-Before you can start using the sfDataSourcePropel, you should know it makes use of a slightly modified propel generator. To activate this extension
+NOTE: be sure to have connection pooling enabled for your propel database (in your database.yml) or else you will get more results than desired with right-joins (one-to-many relations)
+
+By default sfDataSourcePropel makes use of the sfPropelPropertyPathHelper: a helper that makes joining and hydrating easier.
+In order to make use of this helper you should enable the peer and object builders provided by this plugin in the builder map.
 you should change your config/propel.ini and set
 
-propel.builder.peer.class = plugins.sfGridPlugin.lib.builder.SfPeerBuilderDS
+propel.builder.peer.class              = plugins.sfGridPlugin.lib.builder.SfPeerBuilderDS
+propel.builder.object.class            = plugins.sfGridPlugin.lib.builder.SfObjectBuilderDS
 
 run
-symfony propel:build-model
+symfony propel:build-model and you have extended base peer and object classes. 
 
-in order to make use of the new peer method: addSelectColumnsAliased (which is an extension of the addSelectColumns combined with the alias method).
+
+There also is also a bug fix for Propel provided with this plugin, that
+makes it possible to define where columns before you have provide table-aliasses.
+To enable this patch copy two files to your propel folder:
+  cp plugins/sfGridPlugin/lib/symfonyPatch/result\ after\ patch/* lib/symfony/lib/plugins/sfPropelPlugin/lib/vendor/propel/util/.
+  
+(this was created at the time of Symfony 1.2.4) 
+
+So far the difficult part.
+
 
 Now you are ready to make use of the sfDataSourcePropel class. This can be provided to the sfGrid in order to render the data to the screen.
 However a slightly more specialised version of the sfGrid: the sfWebGrid will be used, that can be bond to the webRequest in order to automatically process the
@@ -50,7 +63,7 @@ propel:
 
 Lets see that in action.class.php:
 
-    $source = new sfDataSourcePropel('Album');
+    $source = new sfDataSourcePropel('Foto');
 
     $this->grid = new sfWebGrid($source);
     $this->grid->bind($request);
@@ -59,8 +72,14 @@ Lets see that in action.class.php:
     // sorting is disabled by default
     $this->grid->setSortable(sfGrid::ALL);
 
-    $this->grid->setColumns(array('Album.Title'));
-    $this->grid->setColumnTitles(array('Album.Title' => 'Title'));
+    $this->grid->setColumns(array(
+      'Title',
+      'Album.Title',
+    ));
+    $this->grid->setColumnTitles(array(
+      'Title' => 'Title',
+      'Album.Title' => 'Album',
+    ));
 
 And in your template enter:
 
@@ -68,39 +87,21 @@ And in your template enter:
     <?php echo $grid ?>
     </table>
 
+The definition of columns in your grid is relative to your base object in your datasource.
+If you request related columns, from for example an album, the datasourcePropel will automatically 
+do a left-join on the album column and hydrates this object as well.
+The relations are defined and in your basePeer-classes (::getRelations()) and can be modified to your needs. 
 
-The naming for the properties are similar to the getters. This does not stop at the directly related properties, you can also provide related class-names.
-To demonstrate this, lets make the example a little more exiting:
-
-    //this makes the sfDataSourcePropel class automatically resolve the relation between both classes, select all their columns, set the join and perform the hydration
-    $source = new sfDataSourcePropel('Foto', 'Foto.Album');
-
-    $this->grid = new sfWebGrid($source);
-    $this->grid->bind($request);
-
-    $this->grid->setFormatterName('html');
-    // sorting is disabled by default
-    $this->grid->setSortable(sfGrid::ALL);
-
-    // and now we can use properties from both classes, without additional queries!
-    $this->grid->setColumns(array('Foto.Title', 'Foto.Album.Title'));
-    $this->grid->setColumnTitles(array('Foto.Album.Title' => 'Title', 'Foto.Album.Title' => 'Album'));
-
-Try it yourself:
-todo: tell about providing custom select- and countCriteria objects with resultsets that won't get hydrated (this is already imlemented)
-todo: tell about adding custom Select-Columns to the query, for example to do a MySQL CONCAT (already implemented)
-todo: tell about adding custom getters to your model (this is also already possible)
-todo: tell about modifying the Html-Grid-formatters
-todo: tell about support for multiple ForeignKeys refering to a same Table (like created_by and updated_by), which introduces RelatedBy in the name of the getters.
-
-
-TODO
+TODO:
 ----
 
-I want to make the arguments for the sfDataSourcePropel constructor obsolete, since these can be deducted and passed through by the grid->setColumns method.
-Currently only left_joins are performed, in the future you will be able to define the kind of join yourself.
-Currently sorting is done on only one column, in the future you will be able to sort on multiple columns. And be able to trigger multi-sort when pressing one Column-header (For example when you want to sort on [FirstName,LastName])
+Show how to extend DataSourcePropel per class, E.G.  DataSourcePropelFoto 
+ This way you can define your own sort, filter, count, hydrate (for example use default doSelect peer-methods) methods.
+ 
 Add an example CSS
+fix a bug for relations of many-to-one relations (hydration fails since parent is not resolved)
+fix implementation of custom columns of related objects (not taken into account yet, are defined in the peer)
+
 
 LICENSE
 -------
