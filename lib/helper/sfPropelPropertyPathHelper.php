@@ -18,8 +18,47 @@
  * @subpackage helper
  * @author     Leon van der Ree <leon@fun4me.demon.nl>
  * @version    SVN: $Id$
+ * 
+ * 
  */
 
+/**
+ 
+Example 1: 
+
+$criteria = new Criteria();
+$objectPaths = array('Foto', 'Foto.Album');
+
+$criteria = addJoinsAndSelectColumns($criteria, $objectPaths);
+$fotos = hydrate($criteria, $objectPaths, $connection = null);
+
+foreach ($fotos as $foto) 
+{
+  echo $foto->getAlbum()->getTitle();
+}
+
+
+
+
+Example 2:
+
+$criteria = new Criteria();
+$objectPaths = array('Album.Foto'); // no need to provide Album first, this can be deducted (similar in the first example)
+
+$criteria = addJoinsAndSelectColumns($criteria, $objectPaths);
+$albums = hydrate($criteria, $objectPaths, $connection = null);
+
+foreach ($albums as $album)
+{
+  foreach ($album->getFotos() as $foto)
+  {
+    echo $foto->getTitle();
+  }
+}
+
+
+ * 
+ */
 
 /**
  * Tests if the object path is valid, if not throws an exception
