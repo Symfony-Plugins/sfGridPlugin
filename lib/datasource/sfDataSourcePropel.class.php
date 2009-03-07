@@ -112,7 +112,7 @@ class sfDataSourcePropel extends sfDataSource
    * <code>
    * // fetches all user objects
    * $source = new sfDataSourcePropel('User');
-   * // this will return a hydrated iterator with User Objects//TODO: better than this, auto joins
+   * // this will return a hydrated iterator with User Objects
    *
    * // fetches user objects from Criteria
    * $selectCriteria = new Criteria();
@@ -219,12 +219,6 @@ class sfDataSourcePropel extends sfDataSource
       $criteria = clone $this->selectCriteria;
 
       $criteria = addJoinsAndSelectColumns($criteria, $this->objectPaths);
-
-//      echo ($criteria->toString());
-//      die('todo...');
-      //TODO: split Joins and Selects
-//      $criteria = addSelects($criteria, $this->objectPaths);
-
       $this->data = hydrate($criteria, $this->objectPaths, $this->connection);
 
     }
@@ -279,10 +273,6 @@ class sfDataSourcePropel extends sfDataSource
     {
       $result = $current;
 
-//      //TODO: implement these in peer
-//      $basePeer = constant($this->baseClass.'::PEER');
-//      return call_user_func_array(array($basePeer, 'doSelect'.$this->peerMethod.'GetValue'), array($column));
-
       // TODO: check for object property or custom column, see below
       $getters = $field.'.';
       while (strlen($getters) > 0)
@@ -291,7 +281,8 @@ class sfDataSourcePropel extends sfDataSource
         if (isset($result))
         {
           $result = call_user_func(array($result, 'get'.$getter));
-          // TODO: HACK for one-to-many currenlty only the first related gets iterated
+          // TODO: HACK for one-to-many currenlty the first related gets returned, not the array, and no iteration over the items in the array
+          // The array can be accessed by the object->getProperty accessor, but not by this dataSource-arrayAccess instance
           if (is_array($result))
           {
             $result = array_shift($result);
@@ -303,9 +294,9 @@ class sfDataSourcePropel extends sfDataSource
           return null;
         }
       }
-      //TODO: custom column, this should be done with the help of a peer-method, that uses the sfPropelPropertyPathHelper, which is aware of the getCustomColumnValue method!
+      //TODO: custom column: hydration needs to be implemented for related custom columns (you should define the custom columns in your peer-classes)
       //return $result->getCustomColumnValue($field);
-      // Peer::doSelectJoinGetColumValue($current, $field)
+
     }
     // else in case of custom selectColumns, return column-values directly
     else

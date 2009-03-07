@@ -28,6 +28,31 @@ class SfObjectBuilderDS extends SfObjectBuilder
     $this->addCustomColumnAccessorGetMethod($script);
   }
 
+  /**
+   * Adds the methods for retrieving, initializing, adding objects that are related to this one by foreign keys.
+   * @param      string &$script The script will be modified in this method.
+   */
+  protected function addRefFKMethods(&$script)
+  {
+    foreach ($this->getTable()->getReferrers() as $refFK) {
+      if ($refFK->isLocalPrimaryKey()) {
+        $this->addPKRefFKGet($script, $refFK);
+        $this->addPKRefFKSet($script, $refFK);
+      } else {
+        $this->addRefFKClear($script, $refFK);
+        $this->addRefFKInit($script, $refFK);
+
+        // added
+        $this->addRefFKTouch($script, $refFK);
+
+        $this->addRefFKGet($script, $refFK);
+        $this->addRefFKCount($script, $refFK);
+        $this->addRefFKAdd($script, $refFK);
+        $this->addRefFKGetJoinMethods($script, $refFK);
+      }
+    }
+  }
+
 
   protected function addAttributes(&$script)
   {
@@ -95,12 +120,12 @@ class SfObjectBuilderDS extends SfObjectBuilder
   }
 ';
   }
-  
+
   protected function addCustomColumnAccessorGetMethod(&$script)
   {
     $originalHead = "public function __call(\$method, \$arguments)
   {";
-    
+
     $extraBody = "
   public function __call(\$method, \$arguments)
   {
@@ -108,19 +133,19 @@ class SfObjectBuilderDS extends SfObjectBuilder
     if (strpos(\$method, 'get') === 0)
     {
       \$attribute = substr(\$method,3);
-      
+
       if (\$this->hasCustomColumn(\$attribute))
       {
         return \$this->getCustomColumnValue(\$attribute);
       }
     }
-    
+
     ";
-    
+
     // add extra check for Getters
     $script = str_replace($originalHead, $extraBody, $script);
   }
-  
+
 
   protected function addCustomColumnHydationMethod(&$script)
   {
@@ -130,7 +155,7 @@ class SfObjectBuilderDS extends SfObjectBuilder
    *
    * An offset (0-based \"start column\") is specified so that objects can be hydrated
    * with a subset of the columns in the resultset rows.  This is needed, since the previous
-   * rows are from the already hydrated objects. 
+   * rows are from the already hydrated objects.
    *
    * @param      array \$row The row returned by PDOStatement->fetch(PDO::FETCH_NUM)
    * @param      int \$startcol 0-based offset column which indicates which restultset column to start with.
@@ -145,14 +170,14 @@ class SfObjectBuilderDS extends SfObjectBuilder
     {
       //replace dots with underscores
       \$attributeName = str_replace('.', '_', \$attributeNames[\$i]);
-      
+
       // dynamically add attributes
       \$this->setCustomColumnValue(\$attributeName, \$row[\$i]);
-    }    
-  }  
+    }
+  }
 ";
   }
-  
+
   /**
    * Adds the method that returns the referrer fkey collection.
    * @param      string &$script The script will be modified in this method.
@@ -221,7 +246,7 @@ class SfObjectBuilderDS extends SfObjectBuilder
       }
     } else {
       // criteria has no effect for a new object
-      if (!\$this->isNew() && isset(\$this->$collName) && (count(\$this->$collName)==0)) {
+      if (!\$this->isNew() && !is_array(\$this->$collName)) {
         // the following code is to determine if a new query is
         // called for.  If the criteria is the same as the last
         // one, just return the collection.
@@ -248,6 +273,34 @@ class SfObjectBuilderDS extends SfObjectBuilder
     return \$this->$collName;
   }
 ";
-  } // addRefererGet()  
-    
+  } // addRefererGet()
+
+
+  /**
+   * Adds the method that touches the referrer fkey collection. (so we don't need to rerun queries when it remained null during init)
+   * @param      string &$script The script will be modified in this method.
+   */
+  protected function addRefFKTouch(&$script, ForeignKey $refFK) {
+
+    $relCol = $this->getRefFKPhpNameAffix($refFK, $plural = true);
+    $collName = $this->getRefFKCollVarName($refFK);
+
+    $script .= "
+  /**
+   * Touches the $collName collection (array). (make it array() when null or keep it the way it is)
+   *
+   * This just sets the $collName collection to an empty array if it was null;
+
+   * @return     void
+   */
+  public function touch$relCol()
+  {
+    if (!isset(\$this->$collName) ||  (\$this->$collName == null))
+    {
+      \$this->$collName = array();
+    }
+  }
+";
+  } // addRefererTouch()
+
 }

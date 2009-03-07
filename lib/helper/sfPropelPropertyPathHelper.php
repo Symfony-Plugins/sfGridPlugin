@@ -8,9 +8,8 @@
  * file that was distributed with this source code.
  */
 
-//   - Currently a bug is there when filling relations of a one-to-many-child
-//   - Custom Columns are now only correctly hydrated for the base Object 
-//     (define them again in your peer, see peer::addCustomSelectColumns and object-hydrateCustomColumns)  
+//   - Custom Columns are now only correctly hydrated for the base Object
+//     (define them again in your peer, see peer::addCustomSelectColumns and object-hydrateCustomColumns)
 
 
 /**
@@ -18,13 +17,13 @@
  * @subpackage helper
  * @author     Leon van der Ree <leon@fun4me.demon.nl>
  * @version    SVN: $Id$
- * 
- * 
+ *
+ *
  */
 
 /**
- 
-Example 1: 
+
+Example 1:
 
 $criteria = new Criteria();
 $objectPaths = array('Foto', 'Foto.Album');
@@ -32,7 +31,7 @@ $objectPaths = array('Foto', 'Foto.Album');
 $criteria = addJoinsAndSelectColumns($criteria, $objectPaths);
 $fotos = hydrate($criteria, $objectPaths, $connection = null);
 
-foreach ($fotos as $foto) 
+foreach ($fotos as $foto)
 {
   echo $foto->getAlbum()->getTitle();
 }
@@ -57,7 +56,7 @@ foreach ($albums as $album)
 }
 
 
- * 
+ *
  */
 
 /**
@@ -321,7 +320,7 @@ function flattenAllClasses($objectPath, $classes = array(), $parent = '')
   $className = $classRelations[0];
   $peer = getPeerNameForClass($className);
 
-  $relations = call_user_func(array($peer, 'getRelations')); //TODO: find correct peer and move
+  $relations = call_user_func(array($peer, 'getRelations'));
 
   if ($parent == '')
   {
@@ -549,6 +548,12 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
   // data holds all main results
   $data = array();
 
+  if (!Propel::isInstancePoolingEnabled())
+  {
+    throw new Exception('You need to enable instance pooling to make hydration work correctly');
+    // this can also be solved by implementing a local instance pooling array in this method...
+  }
+
   // if the source is provided as object paths, create hydratable criteria
   if (!is_array($objectPaths))
   {
@@ -571,6 +576,8 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
   foreach ($results as $row)
   {
     $startcol = 0;
+    // keep track of current results of this row, to simplify adding/setting related objects
+    $rowResult = array();
 
     // hydration of the base object
     $key = call_user_func_array(array($basePeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
@@ -588,11 +595,26 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
     // calculate startCol in row for first related class
     $startcol += constant($basePeer.'::NUM_COLUMNS') - constant($basePeer.'::NUM_LAZY_LOAD_COLUMNS');
 
+    // add base object to current rowResult
+    $rowResult[$baseClass] = $instance;
+
     // process all related-classes
     foreach ($classes as $objectPath => $relatedClass)
     {
       $relatedClassName = $relatedClass['className'];
       $relatedPeer = getPeerNameForClass($relatedClassName);
+
+      $parts = explode('.', $objectPath);
+      $relationName = array_pop($parts);
+      $parentObjectPath = implode('.', $parts);
+      $parentClass = resolveClassNameFromObjectPath($parentObjectPath);
+      $parentPeer = getPeerNameForClass($parentClass);
+
+      // get parent instance
+      $parent = isset($rowResult[$parentObjectPath]) ? $rowResult[$parentObjectPath] : null;
+
+      $parentRelations = call_user_func(array($parentPeer, 'getRelations'));
+      $relation = $parentRelations[$relationName];
 
       $key = call_user_func_array(array($relatedPeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
       if ($key !== null)
@@ -608,39 +630,20 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
           call_user_func_array(array($relatedPeer, 'addInstanceToPool'), array($relatedObj, $key));
         }
 
-        $parts = explode('.', $objectPath);
-        $last_relation = array_pop($parts);
-        $objPath = implode('.', $parts);
-        $parentClass = resolveClassNameFromObjectPath($objPath);
-        $parentPeer = getPeerNameForClass($parentClass);
-
-        $parentRelations = call_user_func(array($parentPeer, 'getRelations'));
-        $relation = $parentRelations[$last_relation];
+        // add related object to current rowResult
+        $rowResult[$objectPath] = $relatedObj;
 
         $associateMethod = $relation['associateMethod'];
 
-        // find parent instance
-        $parent = $instance;
-        // remove base object from path
-        array_shift($parts);
-        foreach ($parts as $getMethod)
-        {
-          $parent = call_user_func(array($parent, 'get'.$getMethod));
-        }
-        // in case of one-to-many, find real parent
-        if (is_array($parent))
-        {
-          foreach ($parent as $p)
-          {
-//            if (//TODO find the parent, now taking the first in case of one-to-many!!!)
-//            {
-              $parent = $p;
-              break;
-//            }
-          }
-        }
         // associate related object to parent
         call_user_func_array(array($relatedObj, $associateMethod), array($parent));
+
+      } else {
+        if (($parent != null) && $relation['oneToMany'])
+        {
+          $touchMethod = 'touch'.$relationName;
+          call_user_func(array($parent, $touchMethod));
+        }
       }
 
       // add column-count to startcol for next object
