@@ -308,7 +308,7 @@ function translatePropertyPathToAliasedColumn($baseClass, $propertyPath)
 
   try
   {
-    $fieldName = FotoPeer::translateFieldName($property, BasePeer::TYPE_PHPNAME, BasePeer::TYPE_FIELDNAME);
+    $fieldName = call_user_func_array(array($lastPeer, 'translateFieldName'), array($property, BasePeer::TYPE_PHPNAME, BasePeer::TYPE_FIELDNAME));
   }
   catch (PropelException $e)
   {
