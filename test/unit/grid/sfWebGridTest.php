@@ -11,12 +11,6 @@
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfDataSourceMock.class.php');
 
-// initialize Context, required for url_for routing context
-require_once(dirname(__FILE__).'/../../../../../config/ProjectConfiguration.class.php');
-
-$configuration = ProjectConfiguration::getApplicationConfiguration($app, $env, isset($debug) ? $debug : true);
-sfContext::createInstance($configuration);  
-
 $context = sfContext::getInstance();
 $context->set('user', new FakeUser());
 
@@ -26,16 +20,16 @@ class FakeUser
   public function setAttribute()
   {
   }
-  
+
   public function getAttribute()
   {
     return null;
   }
-  
+
   public function shutdown()
   {
   }
-  
+
 }
 
 class sfWebGridTest extends sfWebGrid
@@ -55,13 +49,13 @@ class sfWebRequestMock extends sfWebRequest
     'page'        => 2,
     'param'       => 'value',
   );
-  
+
   public function __construct() {
     $this->parameterHolder = new sfParameterHolder();
 
     $this->parameterHolder->add($this->getParams);
   }
-      
+
   public function getGetParameters()
   {
     return $this->getParams;
@@ -71,8 +65,8 @@ class sfWebRequestMock extends sfWebRequest
   {
     return $this->parameterHolder->get($name, $default);
   }
-  
-  
+
+
   public function getUri()
   {
     return 'http://test.com';

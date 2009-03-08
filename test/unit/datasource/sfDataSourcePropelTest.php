@@ -12,14 +12,12 @@
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 
 //add propel to include-path
-set_include_path($_SERVER['SYMFONY'].'/plugins/sfPropelPlugin/lib/vendor'.PATH_SEPARATOR.SF_ROOT_DIR.PATH_SEPARATOR.get_include_path());
+set_include_path($_SERVER['SYMFONY'].'/plugins/sfPropelPlugin/lib/vendor'.PATH_SEPARATOR.get_include_path());
 
 // initialize Doctrine
 $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_doctrine_%s.data', md5(__FILE__)));
 $autoload->addDirectory(realpath($_SERVER['SYMFONY'].'/plugins/sfDoctrinePlugin/lib'));
 $autoload->register();
-
-require_once(dirname(__FILE__).'/fixtures/Person.class.php');
 
 function iterator_to_field_array($iterator, $field)
 {
@@ -52,12 +50,7 @@ function iterator_names_to_field_array($iterator)
   return $values;
 }
 
-
-class ProjectConfiguration extends sfProjectConfiguration {}
-
-
 $t = new lime_test(51, new lime_output_color());
-
 
 // initialize Propel
 $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_propel_%s.data', md5(__FILE__)));
@@ -72,30 +65,77 @@ if (!extension_loaded('SQLite'))
 }
 
 // initialize the storage
-$database = new sfPropelDatabase(array('dsn' => 'sqlite::memory:'));
+$database = new sfPropelDatabase(array('dsn' => 'sqlite::memory:', 'pooling' => true));
 $connection = $database->getConnection();
-$connection->exec("CREATE TABLE `person_propel` (
-  `id` INTEGER,
-  `name` VARCHAR( 255 ) NOT NULL,
-  PRIMARY KEY (`id`)
+$connection->exec("CREATE TABLE `album` (
+  `id` INTEGER NOT NULL PRIMARY KEY,
+  `album_id` INTEGER
+    CONSTRAINT `album_FK_1` REFERENCES `album` (`id`),
+  `map` VARCHAR( 255 ),
+  `name` VARCHAR( 255 ),
+  `desciption` TEXT
 ) ");
 
-$coll = array();
-$coll[] = 'Fabien';
-$coll[] = 'Francois';
-$coll[] = 'Jonathan';
-$coll[] = 'Fabian';
-$coll[] = 'Kris';
-$coll[] = 'Nicolas';
-$coll[] = 'Dustin';
-$coll[] = 'Carl';
+$connection->exec("CREATE TABLE `foto` (
+  `id` INTEGER  NOT NULL PRIMARY KEY,
+  `album_id` INTEGER  NOT NULL
+    CONSTRAINT `foto_FK_1` REFERENCES `album` (`id`),
 
-foreach ($coll as $name)
+  `alternative_album_id` INTEGER  default NULL
+    CONSTRAINT `foto_FK_2` REFERENCES `album` (`id`) ON UPDATE CASCADE,
+
+  `filename` varchar(255) default NULL,
+  `title` varchar(255) default NULL,
+  `description` text,
+  `owner_firstname` varchar(100) default NULL,
+  `owner_lastname` varchar(100) default NULL
+) ");
+
+
+
+$albumNames = array();
+$albumNames[] = 'Album 1';
+$albumNames[] = 'Album 2';
+$albumNames[] = 'Album 3';
+
+$albums = array();
+foreach ($albumNames as $name)
 {
-  $pp = new PersonPropel();
-  $pp->setName($name);
-  $pp->save($connection);
+  $album = new Album();
+  $album->setName($name);
+  $album->save($connection);
+
+  $albums[] = $album;
 }
+
+
+$fotoTitles = array();
+$fotoTitles[] = 'title 1';
+$fotoTitles[] = 'title 2';
+$fotoTitles[] = 'title 3';
+$fotoTitles[] = 'title 4';
+$fotoTitles[] = 'title 5';
+$fotoTitles[] = 'title 6';
+$fotoTitles[] = 'title 7';
+$fotoTitles[] = 'title 8';
+$fotoTitles[] = 'title 9';
+
+$i=0;
+foreach ($fotoTitles as $title)
+{
+  $foto = new Foto();
+  $foto->setTitle($title);
+  $foto->setAlbumRelatedByAlbumId($albums[floor($i/5)+1]);
+  $foto->save($connection);
+
+  $i++;
+}
+
+//echo 'Test: ';
+//$stmt = $connection->prepare("SELECT Foto.ID, Foto.ALBUM_ID, Foto.ALTERNATIVE_ALBUM_ID, Foto.FILENAME, Foto.TITLE, Foto.DESCRIPTION, Foto.OWNER_FIRSTNAME, Foto.OWNER_LASTNAME FROM foto Foto");
+//$stmt->execute();
+//$results = $stmt->fetchAll();
+//print_r($results);
 
 ini_set('session.use_cookies', 0);
 $session_id = "1";
@@ -104,12 +144,31 @@ $session_id = "1";
 // ->__construct()
 $t->diag('->__construct()');
 
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$t->is($s->hasColumn('PersonPropel.Id'), true, 'HasColumn Id');
-$t->is($s->hasColumn('PersonPropel.Faked'), false, 'Has NOT Column Faked');
+$fotos = new sfDataSourcePropel('Foto') ;
+$fotos->setConnection($connection);
 
-$current = $s->current();
-$t->is($current->getId(), 1, '->__construct() accepts a Propel class name as argument');
+try
+{
+  $fotos->requireColumn('Id');
+  $t->pass('->requireColumn() doesn\'t throw an error since it has the column Id');
+}
+catch (LogicException $e)
+{
+  $t->fail('->requireColumn() throws an error while column Id should be there');
+}
+
+try
+{
+  $fotos->requireColumn('Faked');
+  $t->fail('->requireColumn() should throw an error since it does not have the column Faked');
+}
+catch (LogicException $e)
+{
+  $t->pass('->requireColumn() throws an error since it does not have the column Faked');
+}
+
+$foto = $fotos->current();
+$t->is($foto->getId(), 1, '->__construct() accepts a Propel class name as argument');
 
 try
 {
@@ -228,7 +287,7 @@ $s = PersonPropelRegister::getPersonPropelDataSource($connection);
 $t->is($s['PersonPropel.Id'], 1, 'sfDataSourcePropel implements the ArrayAccess interface');
 $t->is($s['PersonPropel.Name'], 'Fabien', 'sfDataSourcePropel implements the ArrayAccess interface');
 $t->ok(isset($s['PersonPropel.Id']), 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->ok(!isset($s['PersonPropel.foobar']), 'sfDataSourcePropel implements the ArrayAccess interface'); // @TODO: fix hasColumn method
+$t->ok(!isset($s['PersonPropel.foobar']), 'sfDataSourcePropel implements the ArrayAccess interface');
 $s->next();
 $t->is($s['PersonPropel.Id'] , 2, 'sfDataSourcePropel implements the ArrayAccess interface');
 $t->is($s['PersonPropel.Name'], 'Francois', 'sfDataSourcePropel implements the ArrayAccess interface');

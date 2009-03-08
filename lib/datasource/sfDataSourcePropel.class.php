@@ -220,7 +220,6 @@ class sfDataSourcePropel extends sfDataSource
 
       $criteria = addJoinsAndSelectColumns($criteria, $this->objectPaths);
       $this->data = hydrate($criteria, $this->objectPaths, $this->connection);
-
     }
     // or return raw result sets in case custom criteria objects have been provided
     else

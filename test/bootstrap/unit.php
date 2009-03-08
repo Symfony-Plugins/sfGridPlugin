@@ -8,8 +8,8 @@
  * file that was distributed with this source code.
  */
 
-$app = 'backend';
-$env = 'test';
+$app = 'frontend';
+$env = 'dev';
 
 
 $_test_dir = realpath(dirname(__FILE__).'/..');
@@ -17,7 +17,7 @@ $_test_dir = realpath(dirname(__FILE__).'/..');
 if (!isset($_SERVER['SYMFONY']))
 {
   //throw new RuntimeException('Could not find symfony core libraries.');
-  
+
   $_SERVER['SYMFONY'] = $_test_dir.'/../../../lib/symfony/lib';
 }
 
@@ -29,6 +29,12 @@ sfCoreAutoload::register();
 require_once $_SERVER['SYMFONY'].'/autoload/sfSimpleAutoload.class.php';
 sfSimpleAutoload::getInstance()->addDirectory(dirname(__FILE__).'/../../lib');
 sfSimpleAutoload::register();
+
+// initialize Context, required for url_for routing context and loading helpers
+require_once(dirname(__FILE__).'/../../../../config/ProjectConfiguration.class.php');
+
+$configuration = ProjectConfiguration::getApplicationConfiguration($app, $env, isset($debug) ? $debug : true);
+sfContext::createInstance($configuration);
 
 // load lime
 require_once $_SERVER['SYMFONY'].'/vendor/lime/lime.php';

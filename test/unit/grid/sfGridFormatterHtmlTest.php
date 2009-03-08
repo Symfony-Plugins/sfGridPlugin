@@ -11,12 +11,6 @@
 require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfGridMock.class.php');
 
-// initialize Context, required for url_for routing context
-require_once(dirname(__FILE__).'/../../../../../config/ProjectConfiguration.class.php');
-
-$configuration = ProjectConfiguration::getApplicationConfiguration($app, $env, isset($debug) ? $debug : true);
-sfContext::createInstance($configuration);  
-
 $t = new lime_test(53, new lime_output_color());
 
 // Iterator interface
@@ -28,7 +22,7 @@ foreach ($f as $key => $row)
   $t->is($key, $i, 'sfGridFormatterHtml implements the Iterator interface');
   $t->isa_ok($row, 'sfGridFormatterHtmlRow', 'sfGridFormatterHtml implements the Iterator interface');
   $t->is($row->getIndex(), $i, 'sfGridFormatterHtml implements the Iterator interface');
-  
+
   ++$i;
 }
 
@@ -65,8 +59,8 @@ $t->is($f->renderColumnHead('id'), '<th class="sort_asc"><a href="http://test.co
 $g->setSort('id', 'desc');
 $t->is($f->renderColumnHead('id'), '<th class="sort_desc"><a href="http://test.com?sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
 
-// Bernhard, this fails now, since I loose all parameters (by design). 
-// Do you think this is required! (do you need the parameters), I store 
+// Bernhard, this fails now, since I loose all parameters (by design).
+// Do you think this is required! (do you need the parameters), I store
 // parameters in the user-session, and don't set them in the URL
 
 //$g->setUri('http://test.com?param=value&sort=column&type=desc');
@@ -124,7 +118,7 @@ catch (LogicException $e)
   $t->pass('->renderPager() throws a "LogicException" if no URI has been set');
 }
 
-// Bernhard, again I strip the parameters with setUri 
+// Bernhard, again I strip the parameters with setUri
 $g->setUri('http://test.com?param=value&page=100');
 $output = <<<EOF
 <div class="paging">

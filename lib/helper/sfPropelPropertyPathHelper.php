@@ -301,8 +301,22 @@ function translatePropertyPathToAliasedColumn($baseClass, $propertyPath)
   array_unshift($parts, $baseClass);
   // insert _ between all objects in the objectPath
   $aliasedColumn = implode('_', $parts);
+  $objectPath = implode('.', $parts);
 
-  return $aliasedColumn.'.'.$property;
+  $lastClass = resolveClassNameFromObjectPath($objectPath);
+  $lastPeer = getPeerNameForClass($lastClass);
+
+  try
+  {
+    $fieldName = FotoPeer::translateFieldName($property, BasePeer::TYPE_PHPNAME, BasePeer::TYPE_FIELDNAME);
+  }
+  catch (PropelException $e)
+  {
+    // $property is no fieldName, possibly custom column;no need to translate
+    $fieldName = $property;
+  }
+
+  return $aliasedColumn.'.'.$fieldName;
 }
 
 /**
