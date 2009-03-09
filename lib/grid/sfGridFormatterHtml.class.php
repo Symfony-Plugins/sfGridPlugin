@@ -14,6 +14,9 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   const PREV  = "&laquo;";
   const NEXT  = "&raquo;";
   const LAST  = "&raquo;|";
+  
+  const SORT_ASC  = 'sort_asc';
+  const SORT_DESC = 'sort_desc';
 
   /**
    * @var sfGrid
@@ -25,8 +28,8 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     $cursor     = 0,
     $uri        = null,
     $sortable   = array(),
-    $sortClass  = array('asc' => 'sort_asc',
-                        'desc' => 'sort_desc');
+    $sortClass  = array('asc'  => self::SORT_ASC ,
+                        'desc' => self::SORT_DESC );
 
   static public function indent($code, $levels)
   {
@@ -42,11 +45,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   {
     $this->grid = $grid;
 
-    // TODO: this should probably not be done during construction
-//    if (count($this) > 0)
-//    {
-      $this->row = new sfGridFormatterHtmlRow($grid, 0);
-//    }
+    $this->row = new sfGridFormatterHtmlRow($grid, 0);
   }
 
   /**
@@ -63,6 +62,18 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     }
 
     $this->sortClass = $sortClass;
+  }
+
+    /**
+   * Sets the condition to add a css-class to a row
+   *
+   * @param string $column  the column name
+   * @param mixed  $value   the value the column should be equal to
+   * @param string $class   the css-class the row should get 
+   */
+  public function setRowHighlightCondition($column, $value = true, $class='active')
+  {
+    $this->row->setRowHighlightCondition($column, $value, $class);
   }
 
   public function render()

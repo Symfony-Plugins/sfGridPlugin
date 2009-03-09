@@ -263,7 +263,7 @@ class sfGrid implements Countable
   {
     return $this->formatter;
   }
-
+  
   /**
    * Returns a pager for the data source of the grid.
    *
@@ -327,7 +327,14 @@ class sfGrid implements Countable
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfGrid::ASC or sfGrid::DESC', $order));
     }
 
-    $this->getDataSource()->requireColumn($column);
+    try 
+    {
+      $this->getDataSource()->requireColumn($column);
+    }
+    catch (Exception $e)
+    {
+      throw new Exception('Unable to sort on column: "'.$column.'"');
+    }
 
     $this->sortColumn = $column;
     $this->sortOrder = $order;

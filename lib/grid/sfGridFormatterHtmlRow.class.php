@@ -13,6 +13,8 @@ class sfGridFormatterHtmlRow implements ArrayAccess
   protected
     $grid     = null,
     $index    = null;
+  
+  protected $highlightCondition = array();
 
   public function __construct(sfGrid $grid, $index)
   {
@@ -21,12 +23,6 @@ class sfGridFormatterHtmlRow implements ArrayAccess
 
   public function initialize(sfGrid $grid, $index)
   {
-    //TODO: do we need to do this?
-//    if ($index >= count($grid))
-//    {
-//      throw new OutOfBoundsException(sprintf('The row with index "%s" does not exist', $index));
-//    }
-
     $this->grid = $grid;
     $this->index = $index;
   }
@@ -46,13 +42,38 @@ class sfGridFormatterHtmlRow implements ArrayAccess
     $source = $this->grid->getDataSource();
     $source->seek($this->index);
 
-    $data = "<tr>\n";
+    $css = '';
+    if (isset($this->highlightCondition['column']))
+    {
+      if ($source[$this->highlightCondition['column']] == $this->highlightCondition['value'])
+      {
+        $css = ' class="'.$this->highlightCondition['class'].'"';
+      }
+    }
+    
+    $data = "<tr".$css.">\n";
     foreach ($this->grid->getWidgets() as $column => $widget)
     {
       $data .= "  <td>" . $widget->render($column, $source[$column]) . "</td>\n";
     }
 
     return $data . "</tr>\n";
+  }
+  
+  /**
+   * Sets the condition to add a css-class to a row
+   *
+   * @param string $column  the column name
+   * @param mixed  $value   the value the column should be equal to
+   * @param string $class   the css-class the row should get 
+   */
+  public function setRowHighlightCondition($column, $value = true, $class='active')
+  {
+    $this->highlightCondition = array(
+      'column' => $column, 
+      'value'  => $value,
+      'class'  => $class,
+    );
   }
 
   public function offsetGet($key)
