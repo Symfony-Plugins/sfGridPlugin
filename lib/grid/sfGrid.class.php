@@ -263,7 +263,7 @@ class sfGrid implements Countable
   {
     return $this->formatter;
   }
-  
+
   /**
    * Returns a pager for the data source of the grid.
    *
@@ -283,6 +283,9 @@ class sfGrid implements Countable
    */
   public function render()
   {
+    // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
+    $this->getDataSource()->setOffset(($this->getPager()->getPage()-1) * $this->getPager()->getMaxPerPage());
+
     if ($this->formatter === null)
     {
       throw new LogicException('A formatter must be set before calling render()');
@@ -327,7 +330,7 @@ class sfGrid implements Countable
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfGrid::ASC or sfGrid::DESC', $order));
     }
 
-    try 
+    try
     {
       $this->getDataSource()->requireColumn($column);
     }
@@ -372,6 +375,7 @@ class sfGrid implements Countable
    */
   public function configure()
   {
+    $this->setFormatterName('html');
   }
 
   /**

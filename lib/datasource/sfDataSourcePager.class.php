@@ -81,7 +81,7 @@ class sfDataSourcePager implements Iterator
   protected
     $source      = null,
     $maxPerPage  = 0,
-    $page        = 1,
+    $page,
     $pages       = array(),
     $pageLimit   = 0,
     $recordCount = -1,
@@ -119,6 +119,12 @@ class sfDataSourcePager implements Iterator
     if ($amount < 0)
     {
       throw new DomainException(sprintf('The maximum amount of records per page (%s) must be 0 or greater', $amount));
+    }
+
+    if (isset($this->page))
+    {
+      throw new Exception('You should call setMaxPerPage directly after the construction of the page object,
+                           or at least before setting the current page');
     }
 
     $this->maxPerPage = $amount;
@@ -174,8 +180,6 @@ class sfDataSourcePager implements Iterator
    */
   public function getRecordCount()
   {
-    // cache the recordCount at first use, make sure it does not get used, before grid/pager is actually rendered
-    // TODO: test set breakpoint here, to delay calculation of count as late as possible (just before rendering).
     if ($this->recordCount == -1)
     {
       $this->recordCount = $this->source->countAll();
@@ -218,18 +222,7 @@ class sfDataSourcePager implements Iterator
    */
   public function setPage($page)
   {
-    if ($page < 1)
-    {
-      $page = 1;
-    }
-    if ($page > $this->getPageCount())
-    {
-      $page = $this->getPageCount();
-    }
-
     $this->page = $page;
-
-    $this->source->setOffset(($page-1) * $this->getMaxPerPage());
   }
 
   /**
@@ -240,6 +233,20 @@ class sfDataSourcePager implements Iterator
    */
   public function getPage()
   {
+    if (!isset($this->page))
+    {
+      $this->page = 1;
+    }
+
+    if ($this->page < 1)
+    {
+      $this->page = 1;
+    }
+    if ($this->page > $this->getPageCount())
+    {
+      $this->page = $this->getPageCount();
+    }
+
     return $this->page;
   }
 
