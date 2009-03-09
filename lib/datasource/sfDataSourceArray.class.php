@@ -47,7 +47,8 @@
 class sfDataSourceArray extends sfDataSource
 {
   protected
-    $data = array();
+    $data = array(),
+    $originalData = array();
 
   private
     $sortColumn = null,
@@ -103,7 +104,9 @@ class sfDataSourceArray extends sfDataSource
       }
     }
 
-    $this->data = $data;
+    $this->originalData = $data;
+    $this->data = $this->originalData;
+    
   }
 
   /**
@@ -187,7 +190,7 @@ class sfDataSourceArray extends sfDataSource
 
     usort($this->data, array($this, 'sortCallback'));
   }
-
+  
   /**
    * Callback method used by usort(). Compares two arrays by the current
    * sort column in the given sort order.
@@ -198,7 +201,7 @@ class sfDataSourceArray extends sfDataSource
    *                  exactly zero if both arguments are equal,
    *                  more than zero if the second argument is less than the first
    */
-  public function sortCallback(array $a, array $b)
+  protected function sortCallback(array $a, array $b)
   {
     if ($this->sortOrder == sfDataSourceInterface::ASC)
     {
@@ -209,4 +212,36 @@ class sfDataSourceArray extends sfDataSource
       return strcmp($b[$this->sortColumn], $a[$this->sortColumn]);
     }
   }
+  
+  /**
+   * @see sfDataSourceInterface
+   */
+  public function setFilter($fields)
+  {
+    // TODO: because of this, you should first Filter before you sort!
+    // TODO: possibly add sortState (asc,desc, none (per field)), and sort after filtering 
+    $this->data = array();
+    
+    foreach ($fields as $columnName => $column)
+    {
+      $this->requireColumn($columnName);
+
+      if (!isset($column['value']))
+      {
+        throw new Exception("key 'value' not set for filter on column ".$columnName);
+      }
+
+      $value = $column['value'];
+      $operator =  isset($column['operator']) ? $column['operator'] : sfDataSource::EQUAL;
+
+      $this->data = array_filter($this->originalData, array($this, 'filterCallback'));
+    }
+  }
+
+  //TODO: implement filtering on an array
+  protected function filterCallback($row)
+  {  
+    throw new Exception('This method has not been finished yet');
+  }
+    
 }

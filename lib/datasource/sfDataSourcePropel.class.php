@@ -529,10 +529,11 @@ class sfDataSourcePropel extends sfDataSource
 
       if (!isset($column['value']))
       {
-        throw new Exception("key 'value' not set for column ".$columnName);
+        throw new Exception("key 'value' not set for filter on column ".$columnName);
       }
 
       $value = $column['value'];
+      // TODO translate all sfDatasourceOperators to Propel Criteria operators
       $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
 
       $this->selectCriteria->add($columnName, $value, $operator);

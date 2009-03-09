@@ -18,6 +18,11 @@ class sfWebGrid extends sfGrid
    */
   protected $namespaceAddition = '';
   
+  /**
+   * Bind the webRequest to the Grid, to make it automatically parse all parameters
+   * 
+   * @param sfWebRequest $request
+   */
   public function bind(sfWebRequest $request)
   {
     $context = sfContext::getInstance();
@@ -69,7 +74,8 @@ class sfWebGrid extends sfGrid
   }
   
   /**
-   * Enter description here...
+   * Add an addition at the end of the namespace, in case you have 
+   * a couple of grids on one page and want to separate their interaction
    *
    * @param string $namespaceAddition  the addition to the namespace
    */
