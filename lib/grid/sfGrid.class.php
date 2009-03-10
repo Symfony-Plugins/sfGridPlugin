@@ -213,7 +213,7 @@ class sfGrid implements Countable
     return $title;
   }
 
-	/**
+  /**
    * Sets the title options used to render above the given column.
    *
    * @param  string $column   The name of the column
@@ -230,7 +230,7 @@ class sfGrid implements Countable
 
     $this->columnTitlesOptions[$column] = $options;
   }
-  
+
   /**
    * Get the colum title options.
    *
@@ -369,7 +369,7 @@ class sfGrid implements Countable
     }
     catch (Exception $e)
     {
-      throw new Exception('Unable to sort on column: "'.$column.'"');
+      throw new LogicException('Unable to sort on column: "'.$column.'"');
     }
 
     $this->sortColumn = $column;

@@ -14,7 +14,7 @@ class sfDataSourceMock extends ArrayIterator implements sfDataSourceInterface
     $sortedBy = null,
     $limit = null,
     $offset = null;
-    
+
   public function __construct($limit = null)
   {
     $data = array(
@@ -28,48 +28,60 @@ class sfDataSourceMock extends ArrayIterator implements sfDataSourceInterface
       array('id' => 8, 'name' => 'Dustin'),
       array('id' => 9, 'name' => 'Carl'),
     );
-    
+
     if (!is_null($limit))
     {
       $data = array_slice($data, 0, $limit);
     }
-    
+
     parent::__construct($data);
   }
-  
+
   public function setSort($column, $order = sfDataSourceInterface::ASC)
   {
     $this->sortedBy = array($column, $order);
   }
-  
+
   public function setOffset($offset)
   {
     $this->offset = $offset;
   }
-  
+
   public function setLimit($limit)
   {
     $this->limit = $limit;
   }
-  
+
   public function count()
   {
     return is_null($this->limit) ? parent::count() : min($this->limit, parent::count());
   }
-  
+
   public function countAll()
   {
     return parent::count();
   }
-  
+
   public function offsetGet($key)
   {
     $array = $this->current();
     return $array[$key];
   }
-  
-  public function hasColumn($column)
+
+  public function requireColumn($column)
   {
-    return in_array($column, array('id', 'name'));
+    if (!(in_array($column, array('id', 'name'))))
+    {
+      throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
+    }
+
+  }
+
+  /**
+   * @see sfDataSourceInterface
+   */
+  public function setFilter($fields)
+  {
+    throw new Exception('This method has not been implemented yet');
   }
 }

@@ -16,11 +16,23 @@ class sfDataSourceTest extends sfDataSource
     $sortColumn = null,
     $sortOrder = null;
 
-  public function hasColumn($column)
+  public function requireColumn($column)
   {
-    return $column == 'id';
+    if ($column != 'id')
+    {
+      throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
+    }
   }
-  
+
+  /**
+   * @see sfDataSourceInterface
+   */
+  public function setFilter($fields)
+  {
+    throw new Exception('This method has not been implemented yet');
+  }
+
+
   protected function doSort($column, $order)
   {
     $this->sortColumn = $column;

@@ -14,7 +14,7 @@ require_once(dirname(__FILE__).'/../mock/sfDataSourceMock.class.php');
 class sfDataSourcePagerTest extends sfDataSourcePager
 {
   public $maxPerPage = 0;
-  
+
   public function setMaxPerPage($amount)
   {
     $this->maxPerPage = $amount;
@@ -22,7 +22,7 @@ class sfDataSourcePagerTest extends sfDataSourcePager
   }
 }
 
-$t = new lime_test(72, new lime_output_color());
+$t = new lime_test(70, new lime_output_color());
 
 // ->getDataSource()
 $t->diag('->getDataSource()');
@@ -70,7 +70,7 @@ $t->ok(!$p->hasToPaginate(), '->hasToPaginate() returns whether the pager has to
 $p = new sfDataSourcePager(new sfDataSourceMock(), 0);
 $t->ok(!$p->hasToPaginate(), '->hasToPaginate() returns whether the pager has to paginate');
 $p = new sfDataSourcePager(new sfDataSourceMock(), 2);
-$t->ok($p->hasToPaginate(), '->hasToPaginate() returns whether the pager has to paginate'); 
+$t->ok($p->hasToPaginate(), '->hasToPaginate() returns whether the pager has to paginate');
 
 // ->setPage(), ->getPage()
 $t->diag('->setPage(), ->getPage()');
@@ -78,13 +78,17 @@ $p = new sfDataSourcePager(new sfDataSourceMock(), 2);
 $t->is($p->getPage(), 1, '->getPage() returns 1 if no page has been set');
 $p->setPage(-1);
 $t->is($p->getPage(), 1, '->setPage() sets the page to the first if the given value is smaller than zero');
-$p->setPage(2); 
+$p->setPage(2);
 $t->is($p->getPage(), 2, '->setPage() sets the page correctly');
-$t->is($p->getDataSource()->offset, 2, '->setPage() sets the offset on the data source');
+
+// I don't think this is desired, page should only be changed until we are rendering
+//$t->is($p->getDataSource()->offset, 2, '->setPage() sets the offset on the data source');
+
 $t->is($s->offset, null, '->setPage() does not set the offset on the original data source');
 $p->setPage(10);
 $t->is($p->getPage(), 5, '->setPage() sets the page to the last if the given value is greater than the page count');
-$t->is($p->getDataSource()->offset, 8, '->setPage() sets the offset on the data source');
+// I don't think this is desired, page should only be changed until we are rendering
+//$t->is($p->getDataSource()->offset, 8, '->setPage() sets the offset on the data source');
 
 // ->getFirstPage(), ->getPreviousPage(), ->getNextPage(), ->getLastPage()
 $t->diag('->getFirstPage(), ->getPreviousPage(), ->getNextPage(), ->getLastPage()');

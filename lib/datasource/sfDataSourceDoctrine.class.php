@@ -243,7 +243,7 @@ class sfDataSourceDoctrine extends sfDataSource
    */
   public function requireColumn($column)
   {
-    if (!$this->getTable()->requireColumn($column))
+    if (!$this->getTable()->hasColumn($column))
     {
       throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
     }
@@ -309,6 +309,15 @@ class sfDataSourceDoctrine extends sfDataSource
 
     $this->query->orderBy($column.' '.strtoupper($order));
     $this->refresh();
+  }
+
+
+  /**
+   * @see sfDataSourceInterface
+   */
+  public function setFilter($fields)
+  {
+    throw new Exception('This method has not been implemented yet');
   }
 
   /**

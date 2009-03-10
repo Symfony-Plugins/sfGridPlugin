@@ -25,7 +25,7 @@ $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPAR
 $autoload->addDirectory(realpath($_SERVER['SYMFONY'].'/plugins/sfDoctrinePlugin/lib'));
 $autoload->register();
 
-class ProjectConfiguration extends sfProjectConfiguration {}
+//class ProjectConfiguration extends sfProjectConfiguration {}
 
 $configuration = new ProjectConfiguration(dirname(__FILE__).'/../../lib', new sfEventDispatcher());
 $database = new sfDoctrineDatabase(array('name' => 'doctrine', 'dsn' => 'sqlite::memory:'));

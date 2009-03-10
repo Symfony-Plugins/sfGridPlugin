@@ -14,7 +14,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   const PREV  = "&laquo;";
   const NEXT  = "&raquo;";
   const LAST  = "&raquo;|";
-  
+
   const SORT_ASC  = 'sort_asc';
   const SORT_DESC = 'sort_desc';
 
@@ -69,7 +69,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
    *
    * @param string $column  the column name
    * @param mixed  $value   the value the column should be equal to
-   * @param string $class   the css-class the row should get 
+   * @param string $class   the css-class the row should get
    */
   public function setRowHighlightCondition($column, $value = true, $class='active')
   {
@@ -179,8 +179,8 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   public function renderColumnHead($column)
   {
     sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url', 'Tag'));
-    
-		$html = $this->grid->getTitleForColumn($column);
+
+    $html = $this->grid->getTitleForColumn($column);
     $arrOptions = $this->grid->getOptionsTitleForColumn($column);
 
     if (in_array($column, $this->grid->getSortable()))
@@ -197,7 +197,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
         {
           $arrOptions['class'] .= ' '. $this->sortClass[$this->grid->getSortOrder()];
         }
-        else 
+        else
         {
           $arrOptions['class'] = $this->sortClass[$this->grid->getSortOrder()];
         }
@@ -211,13 +211,13 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       // column is currently being sorted
       $html = sprintf("<a href=\"%s\">%s</a>",
                       url_for($uri. '?' . http_build_query(array('sort' => $column,
-                                                                 'type' => $nextOrder), 
+                                                                 'type' => $nextOrder),
                                                            '',
                                                            '&')),
                       $html);
     }
 
-    return tag('th', $arrOptions).$html.'</th>';
+    return tag('th', $arrOptions, true).$html.'</th>';
   }
 
   public function current()

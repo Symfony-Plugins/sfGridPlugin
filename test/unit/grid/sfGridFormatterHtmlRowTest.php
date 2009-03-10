@@ -12,7 +12,7 @@ require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfGridMock.class.php');
 require_once(dirname(__FILE__).'/../mock/sfWidgetMock.class.php');
 
-$t = new lime_test(13, new lime_output_color());
+$t = new lime_test(11, new lime_output_color());
 
 // ->__construct()
 $t->diag('->__construct()');
@@ -21,15 +21,16 @@ $f = new sfGridFormatterHtmlRow($grid, 1);
 $t->is($f->getGrid(), $grid, '__construct() initializes the formatter');
 $t->is($f->getIndex(), 1, '__construct() initializes the formatter');
 
-try
-{
-  new sfGridFormatterHtmlRow($grid, 1000);
-  $t->fail('__construct() throws an "OutOfBoundsException" if the given index does not exist');
-}
-catch (OutOfBoundsException $e)
-{
-  $t->pass('__construct() throws an "OutOfBoundsException" if the given index does not exist');
-}
+// We don't throw out of bound exceptions anymore, we do this lazy
+//try
+//{
+//  new sfGridFormatterHtmlRow($grid, 1000);
+//  $t->fail('__construct() throws an "OutOfBoundsException" if the given index does not exist');
+//}
+//catch (OutOfBoundsException $e)
+//{
+//  $t->pass('__construct() throws an "OutOfBoundsException" if the given index does not exist');
+//}
 
 // ->initialize()
 $t->diag('->initialize()');
@@ -40,15 +41,16 @@ $f->initialize($grid, 1);
 $t->is($f->getGrid(), $grid, 'initialize() initializes the formatter');
 $t->is($f->getIndex(), 1, 'initialize() initializes the formatter');
 
-try
-{
-  $f->initialize($grid, 1000);
-  $t->fail('initialize() throws an "OutOfBoundsException" if the given index does not exist');
-}
-catch (OutOfBoundsException $e)
-{
-  $t->pass('initialize() throws an "OutOfBoundsException" if the given index does not exist');
-}
+// We don't throw out of bound exceptions anymore, we do this lazy
+//try
+//{
+//  $f->initialize($grid, 1000);
+//  $t->fail('initialize() throws an "OutOfBoundsException" if the given index does not exist');
+//}
+//catch (OutOfBoundsException $e)
+//{
+//  $t->pass('initialize() throws an "OutOfBoundsException" if the given index does not exist');
+//}
 
 // -> render()
 $t->diag('->render()');
