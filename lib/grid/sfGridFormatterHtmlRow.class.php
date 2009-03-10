@@ -45,7 +45,7 @@ class sfGridFormatterHtmlRow implements ArrayAccess
     $css = '';
     if (isset($this->highlightCondition['column']))
     {
-      if ($source[$this->highlightCondition['column']] == $this->highlightCondition['value'])
+      if ($source[$this->highlightCondition['column']] === $this->highlightCondition['value'])
       {
         $css = ' class="'.$this->highlightCondition['class'].'"';
       }
