@@ -54,7 +54,19 @@ class sfGridFormatterHtmlRow implements ArrayAccess
     $data = "<tr".$css.">\n";
     foreach ($this->grid->getWidgets() as $column => $widget)
     {
-      $data .= "  <td>" . $widget->render($column, $source[$column]) . "</td>\n";
+      if ($widget->getOption('cssTd'))
+      {
+        $arrOptions = array('class' => $widget->getOption('cssTd'));
+      }
+      else
+      {
+        $arrOptions = array();
+      }
+      $data .= $widget->renderContentTag('td', 
+                                         $widget->render($column, 
+                                                         $source[$column]),
+                                         $arrOptions)
+              ."\n";
     }
 
     return $data . "</tr>\n";

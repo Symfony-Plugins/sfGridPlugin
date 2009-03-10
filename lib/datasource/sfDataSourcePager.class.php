@@ -163,7 +163,9 @@ class sfDataSourcePager implements Iterator
   public function getPageCount()
   {
     // cache the page count since countAll() might use resources on every call
-    if ($this->getMaxPerPage() > 0)
+    if ($this->getMaxPerPage() > 0
+        &&
+        $this->getRecordCount() > 0)
     {
       return (int)ceil($this->getRecordCount() / (float)$this->getMaxPerPage());
     }
@@ -237,14 +239,17 @@ class sfDataSourcePager implements Iterator
     {
       $this->page = 1;
     }
-
-    if ($this->page < 1)
+    else
     {
-      $this->page = 1;
-    }
-    if ($this->page > $this->getPageCount())
-    {
-      $this->page = $this->getPageCount();
+      if ($this->page > $this->getPageCount())
+      {
+        $this->page = $this->getPageCount();
+      }
+      
+      if ($this->page < 1)
+      {
+        $this->page = 1;
+      }
     }
 
     return $this->page;

@@ -28,8 +28,8 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     $cursor     = 0,
     $uri        = null,
     $sortable   = array(),
-    $sortClass  = array('asc'  => self::SORT_ASC ,
-                        'desc' => self::SORT_DESC );
+    $sortClass  = array(sfGrid::ASC  => self::SORT_ASC ,
+                        sfGrid::DESC => self::SORT_DESC );
 
   static public function indent($code, $levels)
   {
@@ -170,14 +170,18 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return $html . "</tbody>\n";
   }
 
+  /**
+   * Enter description here...
+   *
+   * @param string $column
+   * @return string html formatted string
+   */
   public function renderColumnHead($column)
   {
-    sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url'));
-//    $widget = $this->grid->getWidget($column); //this is not used, if it gets used, it should be a columnHEADrenderWidget
-
-    $html = $this->grid->getTitleForColumn($column);
-
-    $class='';
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('Url', 'Tag'));
+    
+		$html = $this->grid->getTitleForColumn($column);
+    $arrOptions = $this->grid->getOptionsTitleForColumn($column);
 
     if (in_array($column, $this->grid->getSortable()))
     {
@@ -189,7 +193,14 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
 
       if ($this->grid->getSortColumn() == $column)
       {
-        $class = ' class="'.$this->sortClass[$this->grid->getSortOrder()].'"';
+        if (isset($arrOptions['class']))
+        {
+          $arrOptions['class'] .= ' '. $this->sortClass[$this->grid->getSortOrder()];
+        }
+        else 
+        {
+          $arrOptions['class'] = $this->sortClass[$this->grid->getSortOrder()];
+        }
       }
 
       $nextOrder = $this->grid->getSortColumn() == $column
@@ -199,11 +210,14 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       // build the HTML with a class attribute sort_asc or sort_desc, if the
       // column is currently being sorted
       $html = sprintf("<a href=\"%s\">%s</a>",
-         url_for($uri. '?' . http_build_query(array('sort' => $column, 'type' => $nextOrder), '', '&')),
-         $html);
+                      url_for($uri. '?' . http_build_query(array('sort' => $column,
+                                                                 'type' => $nextOrder), 
+                                                           '',
+                                                           '&')),
+                      $html);
     }
 
-    return "<th".$class.">" . $html . "</th>";
+    return tag('th', $arrOptions).$html.'</th>';
   }
 
   public function current()

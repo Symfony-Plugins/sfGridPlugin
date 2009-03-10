@@ -50,6 +50,7 @@ class sfGrid implements Countable
   private
     $columns      = array(),
     $columnTitles = array(),
+    $columnTitlesOptions = array(),
     $sortable     = array(),
     $widgets      = array(),
     $formatter    = null,
@@ -210,6 +211,38 @@ class sfGrid implements Countable
     }
 
     return $title;
+  }
+
+	/**
+   * Sets the title options used to render above the given column.
+   *
+   * @param  string $column   The name of the column
+   * @param  array $options   The html options for the th
+   * @throws LogicException   Throws an exception if the given column
+   *                          name has not been configured with setColumns()
+   */
+  public function setColumnTitleOptions($column, $options)
+  {
+    if (!$this->hasColumn($column))
+    {
+      throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+    }
+
+    $this->columnTitlesOptions[$column] = $options;
+  }
+  
+  /**
+   * Get the colum title options.
+   *
+   * @return array
+   */
+  public function getOptionsTitleForColumn($column)
+  {
+    if (!$this->hasColumn($column))
+    {
+      throw new LogicException(sprintf('The column "%s" is not defined for this grid', $column));
+    }
+    return isset($this->columnTitlesOptions[$column]) ? $this->columnTitlesOptions[$column] : array();
   }
 
   /**
