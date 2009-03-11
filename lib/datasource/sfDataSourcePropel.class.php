@@ -524,20 +524,33 @@ class sfDataSourcePropel extends sfDataSource
 
     foreach ($fields as $propertyPath => $column)
     {
-      $this->requireColumn($propertyPath);
-      $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $propertyPath);
-
-      if (!isset($column['value']))
-      {
-        throw new Exception("key 'value' not set for filter on column ".$columnName);
-      }
-
-      $value = $column['value'];
-      // TODO translate all sfDatasourceOperators to Propel Criteria operators
-      $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
-
-      $this->selectCriteria->add($columnName, $value, $operator);
+      $this->addFilter($propertyPath, $column);
     }
+  }
+  
+  /**
+   * add one constraint to the criteria
+   *
+   * @param string $propertyPath
+   * @param array $column
+   */
+  protected function addFilter($propertyPath, $column)
+  {
+    sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
+
+    $this->requireColumn($propertyPath);
+    $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $propertyPath);
+
+    if (!isset($column['value']))
+    {
+      throw new Exception("key 'value' not set for filter on column ".$columnName);
+    }
+
+    $value = $column['value'];
+    // TODO translate all sfDatasourceOperators to Propel Criteria operators
+    $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
+
+    $this->selectCriteria->add($columnName, $value, $operator);
   }
 
 }

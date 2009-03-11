@@ -561,6 +561,8 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
 {
   // data holds all main results
   $data = array();
+  
+  $processedResults = array();
 
   if (!Propel::isInstancePoolingEnabled())
   {
@@ -595,8 +597,18 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
 
     // hydration of the base object
     $key = call_user_func_array(array($basePeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
-    $new = false; // TODO: this has to be done differently! maintain an associative array of keys that are loaded and check that
-    if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null)
+    if (!isset($processedResults[$baseClass]))
+    {
+      $processedResults[$baseClass] = array();
+    }
+    if (isset($processedResults[$baseClass][$key]))
+    {
+      $new = false;
+      $instance = $processedResults[$baseClass][$key];
+    }
+    else
+// TODO: add instance pooling as well
+//    if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null)
     {
       $new = true;
       $omClass = call_user_func(array($basePeer, 'getOMClass'));
@@ -604,7 +616,10 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
       $cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
       $instance = new $cls();
       $instance->hydrate($row);
-      call_user_func_array(array($basePeer, 'addInstanceToPool'), array($instance, $key));
+      
+// TODO: add instance pooling as well
+//      call_user_func_array(array($basePeer, 'addInstanceToPool'), array($instance, $key));
+      $processedResults[$baseClass][$key] = $instance;
     }
 
     // calculate startCol in row for first related class
@@ -634,15 +649,26 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
       $key = call_user_func_array(array($relatedPeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
       if ($key !== null)
       {
-        $relatedObj = call_user_func_array(array($relatedPeer, 'getInstanceFromPool'), array($key));
-        if (!$relatedObj)
+        if (!isset($processedResults[$objectPath]))
+        {
+          $processedResults[$objectPath] = array();
+        }
+        if (isset($processedResults[$objectPath][$key]))
+        {
+          $relatedObj = $processedResults[$objectPath][$key];
+        }
+        else
+//        $relatedObj = call_user_func_array(array($relatedPeer, 'getInstanceFromPool'), array($key));
+//        if (!$relatedObj)
         {
           $omClass = call_user_func(array($relatedPeer, 'getOMClass'));
 
           $cls = substr('.'.$omClass, strrpos('.'.$omClass, '.') + 1);
           $relatedObj = new $cls();
           $relatedObj->hydrate($row, $startcol);
-          call_user_func_array(array($relatedPeer, 'addInstanceToPool'), array($relatedObj, $key));
+          
+//          call_user_func_array(array($relatedPeer, 'addInstanceToPool'), array($relatedObj, $key));
+          $processedResults[$objectPath][$key] = $relatedObj;
         }
 
         // add related object to current rowResult
