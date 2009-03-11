@@ -595,7 +595,7 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
 
     // hydration of the base object
     $key = call_user_func_array(array($basePeer, 'getPrimaryKeyHashFromRow'), array($row, $startcol));
-    $new = false;
+    $new = false; // TODO: this has to be done differently! maintain an associative array of keys that are loaded and check that
     if (($instance = call_user_func_array(array($basePeer, 'getInstanceFromPool'), array($key))) === null)
     {
       $new = true;
@@ -606,6 +606,7 @@ function hydrate(Criteria $criteria, $objectPaths, $connection = null)
       $instance->hydrate($row);
       call_user_func_array(array($basePeer, 'addInstanceToPool'), array($instance, $key));
     }
+
     // calculate startCol in row for first related class
     $startcol += constant($basePeer.'::NUM_COLUMNS') - constant($basePeer.'::NUM_LAZY_LOAD_COLUMNS');
 

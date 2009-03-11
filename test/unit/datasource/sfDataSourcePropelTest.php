@@ -50,7 +50,7 @@ function iterator_names_to_field_array($iterator)
   return $values;
 }
 
-$t = new lime_test(51, new lime_output_color());
+$t = new lime_test(47, new lime_output_color());
 
 // initialize Propel
 $autoload = sfSimpleAutoload::getInstance(sfToolkit::getTmpDir().DIRECTORY_SEPARATOR.sprintf('sf_autoload_unit_propel_%s.data', md5(__FILE__)));
@@ -73,7 +73,7 @@ $connection->exec("CREATE TABLE `album` (
     CONSTRAINT `album_FK_1` REFERENCES `album` (`id`),
   `map` VARCHAR( 255 ),
   `name` VARCHAR( 255 ),
-  `desciption` TEXT
+  `description` TEXT
 ) ");
 
 $connection->exec("CREATE TABLE `foto` (
@@ -107,7 +107,6 @@ foreach ($albumNames as $name)
 
   $albums[] = $album;
 }
-
 
 $fotoTitles = array();
 $fotoTitles[] = 'title 1';
@@ -192,7 +191,8 @@ catch (InvalidArgumentException $e)
 
 // ->current()
 $t->diag('->current()');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
 $current = $s->current();
 $t->is($current->getId(), 1, '->current() returns the first result');
 $s->next();
@@ -213,14 +213,16 @@ catch (OutOfBoundsException $e)
 
 // SeekableIterator interface
 $t->diag('SeekableIterator interface');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$t->is(array_keys(iterator_to_array($s)), range(0, 7), 'sfDataSourcePropel implements the SeekableIterator interface');
-$t->is(count(iterator_to_array($s)), 8, 'sfDataSourcePropel implements the SeekableIterator interface');
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
+$t->is(array_keys(iterator_to_array($s)), range(0, 8), 'sfDataSourcePropel implements the SeekableIterator interface');
+$t->is(count(iterator_to_array($s)), 9, 'sfDataSourcePropel implements the SeekableIterator interface');
 
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
 $s->seek(1);
 $t->is($s->current()->getId(), 2, 'sfDataSourcePropel implements the SeekableIterator interface');
-$t->is($s->current()->getName(), 'Francois', 'sfDataSourcePropel implements the SeekableIterator interface');
+$t->is($s->current()->getTitle(), 'title 2', 'sfDataSourcePropel implements the SeekableIterator interface');
 
 try
 {
@@ -244,57 +246,61 @@ catch (OutOfBoundsException $e)
 
 // Countable interface
 $t->diag('Countable interface');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$t->is(count($s), 8, 'sfDataSourcePropel implements the Countable interface');
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
+$t->is(count($s), 9, 'sfDataSourcePropel implements the Countable interface');
 $s->setLimit(4);
 $t->is(count($s), 4, 'sfDataSourcePropel implements the Countable interface');
 $s->setOffset(5);
-$t->is(count($s), 3, 'sfDataSourcePropel implements the Countable interface');
+$t->is(count($s), 4, 'sfDataSourcePropel implements the Countable interface');
 
 // ->countAll()
 $t->diag('->countAll()');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$t->is($s->countAll(), 8, '->countAll() returns the total amount of records');
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
+$t->is($s->countAll(), 9, '->countAll() returns the total amount of records');
 $s->setLimit(4);
-$t->is($s->countAll(), 8, '->countAll() returns the total amount of records');
+$t->is($s->countAll(), 9, '->countAll() returns the total amount of records');
 $s->setOffset(5);
-$t->is($s->countAll(), 8, '->countAll() returns the total amount of records');
+$t->is($s->countAll(), 9, '->countAll() returns the total amount of records');
 
 // ->setLimit()
 $t->diag('->setLimit()');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
 $s->setLimit(4);
-$t->is(iterator_to_field_array($s, 'PersonPropel.Id'), range(1,4), '->setLimit() limits the records returned by the iterator');
+$t->is(iterator_to_field_array($s, 'AlbumRelatedByAlbumId.Id'), array(2,2,2,2), '->setLimit() limits the records returned by the iterator');
 
 // ->setOffset()
 $t->diag('->setOffset()');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
 $s->setOffset(3);
-$t->is(iterator_ids_to_field_array($s), range(4,8), '->setOffset() sets the offset of the iterator');
+$t->is(iterator_ids_to_field_array($s), range(4,9), '->setOffset() sets the offset of the iterator');
 
 $s->setOffset(30);
 $t->is(iterator_ids_to_field_array($s), array(), '->setOffset() sets the offset of the iterator');
 
 $s->setOffset(2);
 $s->seek(1);
-$t->is($s['PersonPropel.Id'], 4, '->setOffset() sets the offset of the iterator');
-$t->is($s['PersonPropel.Name'], 'Fabian', '->setOffset() sets the offset of the iterator');
+$t->is($s['Id'], 4, '->setOffset() sets the offset of the iterator');
+$t->is($s['Title'], 'title 4', '->setOffset() sets the offset of the iterator');
 
 // ArrayAccess interface
 $t->diag('ArrayAccess interface');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-
-$t->is($s['PersonPropel.Id'], 1, 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->is($s['PersonPropel.Name'], 'Fabien', 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->ok(isset($s['PersonPropel.Id']), 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->ok(!isset($s['PersonPropel.foobar']), 'sfDataSourcePropel implements the ArrayAccess interface');
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
+$t->is($s['Id'], 1, 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['Title'], 'title 1', 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->ok(isset($s['Id']), 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->ok(!isset($s['foobar']), 'sfDataSourcePropel implements the ArrayAccess interface');
 $s->next();
-$t->is($s['PersonPropel.Id'] , 2, 'sfDataSourcePropel implements the ArrayAccess interface');
-$t->is($s['PersonPropel.Name'], 'Francois', 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['Id'] , 2, 'sfDataSourcePropel implements the ArrayAccess interface');
+$t->is($s['Title'], 'title 2', 'sfDataSourcePropel implements the ArrayAccess interface');
 
 try
 {
-  $s['PersonPropel.Name'] = 'Foobar';
+  $s['Title'] = 'Foobar';
   $t->fail('sfDataSourcePropel throws a "LogicException" when fields are set using ArrayAccess');
 }
 catch (LogicException $e)
@@ -303,7 +309,7 @@ catch (LogicException $e)
 }
 try
 {
-  unset($s['PersonPropel.Name']);
+  unset($s['Title']);
   $t->fail('sfDataSourcePropel throws a "LogicException" when fields are unset using ArrayAccess');
 }
 catch (LogicException $e)
@@ -324,7 +330,7 @@ catch (OutOfBoundsException $e)
 }
 try
 {
-  isset($s['PersonPropel.Name']);
+  isset($s['Title']);
   $t->fail('sfDataSourcePropel throws an "OutOfBoundsException" when fields are accessed after iterating');
 }
 catch (OutOfBoundsException $e)
@@ -334,68 +340,78 @@ catch (OutOfBoundsException $e)
 
 // ->setSort()
 $t->diag('->setSort()');
-$s = PersonPropelRegister::getPersonPropelDataSource($connection);
-$originalValues = $coll;
+$s = new sfDataSourcePropel('Foto');
+$s->setConnection($connection);
+$originalValues = array(
+  'title 1',
+  'title 2',
+  'title 3',
+  'title 4',
+  'title 5',
+  'title 6',
+  'title 7',
+  'title 8',
+  'title 9',
+);
 
-$s->setSort('PersonPropel.Name', sfDataSourceInterface::DESC);
+$s->setSort('Title', sfDataSourceInterface::DESC);
 rsort($originalValues);
-$t->is(iterator_to_field_array($s, 'PersonPropel.Name'), $originalValues, '->setSort() sorts correctly');
+$t->is(iterator_to_field_array($s, 'Title'), $originalValues, '->setSort() sorts correctly');
 
-$s->setSort('PersonPropel.Name', sfDataSourceInterface::ASC);
-sort($originalValues);
-$t->is(iterator_names_to_field_array($s), $originalValues, '->setSort() sorts correctly');
+//$s->setSort('Title', sfDataSourceInterface::ASC);
+//sort($originalValues);
+//$t->is(iterator_names_to_field_array($s), $originalValues, '->setSort() sorts correctly');
 
 // static methods
-$t->diag('testing static methods');
+$t->diag('testing helper methods');
+sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
-$t->is(sfDataSourcePropel::resolveBaseClass('Base.Child.ChildChild'), 'Base', 'resolveBaseClass resolves first class from objectPath');
+$t->is(resolveBaseClass('Base.Child.ChildChild'), 'Base', 'resolveBaseClass resolves first class from objectPath');
 
-$t->is(sfDataSourcePropel::resolveClassNameFromObjectPath('Base'), 'Base', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
-$t->is(sfDataSourcePropel::resolveClassNameFromObjectPath('Base.Child.ChildChild'), 'ChildChild', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
+$t->is(resolveClassNameFromObjectPath('Foto'), 'Foto', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
+$t->is(resolveClassNameFromObjectPath('Foto.AlbumRelatedByAlbumId'), 'Album', 'resolveClassNameFromObjectPath resolves the latest class from objectPath');
 
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.Child.ChildChild'), 'addBase', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
-$t->is(sfDataSourcePropel::resolveFirstAddMethodForObjectPath('Base.ChildRelatedByForeignKey1.ChildChild'), 'addBaseRelatedByForeignKey1', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
+$relation = getRelationForRelationPath('Foto.AlbumRelatedByAlbumId');
+$t->is($relation['associateMethod'], 'addFotoRelatedByAlbumId', 'resolveFirstAddMethodForObjectPath resolves add Method for first relation objectPath');
 
 try
 {
-  sfDataSourcePropel::checkObjectPath('PersonPropel');
+  checkObjectPath('Foto.AlbumRelatedByAlbumId');
   $t->pass('checkObjectPath OK with valid Path');
 }
 catch (Exception $e)
 {
-  $t->fail('checkObjectPath PL with valid Path');
+  $t->fail('checkObjectPath OK with valid Path');
 }
 
 try
 {
-  sfDataSourcePropel::checkObjectPath('Base.Child.ChildChild');
-  $t->fail('checkObjectPath throws an UnexpectedValueException with invalid Path');
+  checkObjectPath('Invalid.Child.ChildChild');
+  $t->fail('checkObjectPath throws an InvalidArgumentException with invalid Path');
 }
-catch (UnexpectedValueException $e)
+catch (InvalidArgumentException $e)
 {
-  $t->pass('checkObjectPath throws an UnexpectedValueException with invalid Path');
+  $t->pass('checkObjectPath throws an InvalidArgumentException: with invalid Path');
 }
 
 try
 {
-  sfDataSourcePropel::checkObjectPath('Person');
-  $t->fail('checkObjectPath throws an LogicException with invalid Class ');
+  checkObjectPath('Invalid');
+  $t->fail('checkObjectPath throws an InvalidArgumentException with invalid Class ');
 }
-catch (LogicException $e)
+catch (InvalidArgumentException $e)
 {
-  $t->pass('checkObjectPath throws an LogicException with invalid Class');
+  $t->pass('checkObjectPath throws an InvalidArgumentException with invalid Class');
 }
 
 
 $classes = array();
-$classes = sfDataSourcePropel::resolveAllClasses('Base');
-$t->is(count($classes), 1, 'resolveAllClasses returns one class for "Base"');
+$classes = flattenAllClasses('Foto');
+$t->is(count($classes), 1, 'resolveAllClasses returns one class for "Foto"');
 $classAliasses = array_keys($classes);
-$t->is($classAliasses[0], 'Base', 'resolveAllClasses returns alias "Base"');
+$t->is($classAliasses[0], 'Foto', 'resolveAllClasses returns alias "Foto"');
 
-$classes = sfDataSourcePropel::resolveAllClasses('Base.Child.ChildChild', $classes);
-$t->is(count($classes), 3, 'resolveAllClasses correctly adds two classes');
-$base = $classes['Base'];
-$t->is(count($base['relatedTo']), 1, '"Base" correctly gets related to one child class');
-$t->is($base['relatedTo'][0], 'Child', 'child class is "Child"');
+$classes = flattenAllClasses('Foto.AlbumRelatedByAlbumId', $classes);
+$t->is(count($classes), 2, 'resolveAllClasses correctly adds two classes');
+$base = $classes['Foto'];
+$t->is(count($base['relatedTo']), 1, '"Foto" correctly gets related to one child class');
