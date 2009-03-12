@@ -163,7 +163,7 @@ class sfDataSourcePropel extends sfDataSource
     // ...the source can also be passed as custom criteria, these will not be hydrated!
     elseif ($classNameOrSelectCriteria instanceof Criteria)
     {
-      if (!$countCriteria instanceof Criteria)
+      if (!$criteriaOrCountCriteria instanceof Criteria)
       {
         throw new UnexpectedValueException(sprintf('The CountCriteria argument is required when providing a Criteria object as source. The provided $criteriaOrCountCriteria argument is not an instance of Criteria'));
       }
@@ -228,7 +228,9 @@ class sfDataSourcePropel extends sfDataSource
 
       $results = $stmt->fetchAll(PDO::FETCH_NUM);
 
-      $selectColumns = $this->selectCriteria->getSelectColumns();
+      $selectColumns = array_merge($this->selectCriteria->getSelectColumns(), 
+                                   array_keys($this->selectCriteria->getAsColumns()));
+      
       foreach ($results as $result)
       {
         $row = array();
@@ -425,7 +427,7 @@ class sfDataSourcePropel extends sfDataSource
     }
     else
     {
-      if (!in_array($column, $this->selectCriteria->getSelectColumns()))
+      if (!in_array($column, $this->selectCriteria->getSelectColumns()) && !array_key_exists($column, $this->selectCriteria->getAsColumns()))
       {
         throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
       }
