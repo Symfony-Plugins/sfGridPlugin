@@ -57,7 +57,8 @@ class sfGrid implements Countable
     $pager        = null,
     $sortColumn   = null,
     $sortOrder    = null,
-    $uri          = null;
+    $uri          = null,
+    $uri_args     = array();
 
   /**
    * Constructor.
@@ -432,8 +433,18 @@ class sfGrid implements Countable
     }
     else
     {
-      $parts = explode('?', $uri);
-      $this->uri = $parts[0];
+      list($uri, $argString) = explode('?', $uri);
+      $this->uri = $uri;
+      
+      $this->uri_args = array();
+      $argParts = explode('&', $argString);
+
+      foreach ($argParts as $argPart)
+      {
+        list($name, $value) = explode('=', $argPart);
+        $this->uri_args[$name] = $value;
+      }
+        
     }
 
   }
@@ -448,6 +459,16 @@ class sfGrid implements Countable
     return $this->uri;
   }
 
+  /**
+   * Returns the arguments for the URI set with setUri(). If no URI has been set, an empty array is returned.
+   *
+   * @return array the arguments for the URI 
+   */
+  public function getUriArgs()
+  {
+    return $this->uri_args;
+  }  
+  
   /**
    * Sets which columns should appear as sortable when rendered. Whether
    * and how sortable columns look like is defined by the formatter.

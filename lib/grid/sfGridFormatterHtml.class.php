@@ -102,17 +102,18 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     {
       throw new LogicException('Please specify a URI with sfGrid::setUri() before rendering the pager');
     }
+    $uriArgs = $this->grid->getUriArgs();
 
     $pager = $this->grid->getPager();
     $html = "<div class=\"paging\">\n";
 
     if ($pager->hasFirstPage())
     {
-      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getFirstPage()), '', '&')) . "\">".self::FIRST."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array_merge($uriArgs, array('page' => $pager->getFirstPage())) , '', '&')) . "\">".self::FIRST."</a>\n";
     }
     if ($pager->hasPreviousPage())
     {
-      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getPreviousPage()), '', '&')) . "\">".self::PREV."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array_merge($uriArgs, array('page' => $pager->getPreviousPage())), '', '&')) . "\">".self::PREV."</a>\n";
     }
     foreach ($pager as $page)
     {
@@ -122,16 +123,16 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       }
       else
       {
-        $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $page), '', '&')) . "\">" . $page . "</a>\n";
+        $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array_merge($uriArgs, array('page' => $page)), '', '&')) . "\">" . $page . "</a>\n";
       }
     }
     if ($pager->hasNextPage())
     {
-      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getNextPage()), '', '&')) . "\">".self::NEXT."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array_merge($uriArgs, array('page' => $pager->getNextPage())), '', '&')) . "\">".self::NEXT."</a>\n";
     }
     if ($pager->hasLastPage())
     {
-      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array('page' => $pager->getLastPage()), '', '&')) . "\">".self::LAST."</a>\n";
+      $html .= "  <a href=\"" . url_for($uri. '?' . http_build_query(array_merge($uriArgs, array('page' => $pager->getLastPage())), '', '&')) . "\">".self::LAST."</a>\n";
     }
 
     return $html . "</div>\n";
@@ -190,6 +191,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       {
         throw new LogicException('Please specify a URI with sfGrid::setUri() before rendering the pager');
       }
+      $uriArgs = $this->grid->getUriArgs();
 
       if ($this->grid->getSortColumn() == $column)
       {
@@ -210,11 +212,12 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
       // build the HTML with a class attribute sort_asc or sort_desc, if the
       // column is currently being sorted
       $html = sprintf("<a href=\"%s\">%s</a>",
-                      url_for($uri. '?' . http_build_query(array('sort' => $column,
-                                                                 'type' => $nextOrder),
-                                                           '',
-                                                           '&')),
-                      $html);
+                      url_for($uri. '?' . http_build_query(array_merge($uriArgs, 
+                                                                       array('sort' => $column,
+                                                                             'type' => $nextOrder)),
+                                                                       '',
+                                                                       '&')),
+                              $html);
     }
 
     return tag('th', $arrOptions, true).$html.'</th>';
