@@ -565,6 +565,11 @@ class sfDataSourcePropel extends sfDataSource
     $operator =  isset($column['operator']) ? $column['operator'] : Criteria::EQUAL;
 
     $this->selectCriteria->add($columnName, $value, $operator);
+    //also filter countCriteria in case we are using raw criteria objects 
+    if (!$this->baseClass)
+    {
+      $this->countCriteria->add($columnName, $value, $operator);
+    }
   }
 
 }
