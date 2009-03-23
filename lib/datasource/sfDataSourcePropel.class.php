@@ -429,7 +429,9 @@ class sfDataSourcePropel extends sfDataSource
     {
       if (!in_array($column, $this->selectCriteria->getSelectColumns()) && !array_key_exists($column, $this->selectCriteria->getAsColumns()))
       {
-        throw new LogicException(sprintf('The column "%s" has not been defined in the datasource', $column));
+        throw new LogicException(sprintf('The column "%s" has not been defined in the datasource. The following columns are known: (%s)', 
+                                         $column,
+                                         implode(', ', $this->selectCriteria->getSelectColumns())));
       }
     }
   }
@@ -494,8 +496,10 @@ class sfDataSourcePropel extends sfDataSource
     sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
     // translate $column to propel column-name
-    $column = translatePropertyPathToAliasedColumn($this->baseClass, $column);
-
+    if ($this->baseClass)
+    {
+      $column = translatePropertyPathToAliasedColumn($this->baseClass, $column);
+    }
     $column = $this->doCustomSort($column, $order);
 
     if ($column != null)
@@ -541,8 +545,16 @@ class sfDataSourcePropel extends sfDataSource
     sfContext::getInstance()->getConfiguration()->loadHelpers(array('sfPropelPropertyPath'));
 
     $this->requireColumn($propertyPath);
-    $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $propertyPath);
-
+        
+    if ($this->baseClass)
+    {
+      $columnName = translatePropertyPathToAliasedColumn($this->baseClass, $propertyPath);
+    }
+    else 
+    {
+      $columnName = $propertyPath;
+    }
+    
     if (!isset($column['value']))
     {
       throw new Exception("key 'value' not set for filter on column ".$columnName);

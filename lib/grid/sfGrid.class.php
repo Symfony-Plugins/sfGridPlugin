@@ -225,7 +225,9 @@ class sfGrid implements Countable
   {
     if (!$this->hasColumn($column))
     {
-      throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+      throw new LogicException(sprintf('The column "%s" has not been configured. Available columns are: %s.', 
+                                       $column,
+                                       implode(', ', $this->getColumns())));
     }
 
     $this->columnTitlesOptions[$column] = $options;
@@ -467,13 +469,18 @@ class sfGrid implements Countable
     else
     {
       // the developer can also pass a single column name
-      $columns = (array)$columns;
+      if (!is_array($columns))
+      {      
+        $columns = (array)$columns;
+      }
 
       foreach ($columns as $column)
       {
         if (!$this->hasColumn($column))
         {
-          throw new LogicException(sprintf('The column "%s" has not been configured', $column));
+          throw new LogicException(sprintf('The column "%s" has not been configured. Configured columns: %s', 
+                                           $column,
+                                           implode(', ', $this->getColumns())));
         }
       }
 
