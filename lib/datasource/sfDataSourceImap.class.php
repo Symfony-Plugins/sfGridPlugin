@@ -180,7 +180,7 @@ class sfDataSourceImap extends sfDataSource
     // test if sorting asc or descending
     $reverse = ($this->sortOrder == self::DESC) ? 1 : 0; 
 
-    $offset = $this->getOffset() + $this->key() + 1;
+    $offset = $this->getOffset() + $this->key();
     switch ($this->sortColumn)
     {
       case 'date':
@@ -207,6 +207,9 @@ class sfDataSourceImap extends sfDataSource
       case 'size':
         $msgNrs = imap_sort($this->stream, SORTSIZE, $reverse);
         $offset = $msgNrs[$offset];
+        break;
+      default:
+        $offset += 1;
         break;
     }
     
