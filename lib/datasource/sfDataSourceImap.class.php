@@ -87,9 +87,19 @@ class sfDataSourceImap extends sfDataSource
 
     $adress = '{'.$this->host.':'.$this->port.$options.'}'.$this->mailboxName;
     
-    //maybe add @
-    $this->stream = imap_open($adress, $this->username, $this->password);
-    
+    $time = time();
+    // IF THIS IS SLOW, PLEASE MAKE SURE rDNS IS ENALBED ON YOUR SYSTEM 
+    // (one solution is to place the ip of your mail-server in your /etc/hosts file) 
+    $this->stream = imap_open($adress, $this->username, $this->password, OP_DEBUG, 0);
+    $time = (time()-$time);
+    if ($time >= 4)
+    {
+      sfContext::getInstance()->getLogger()->notice(
+                    'Imap-login is slow! 
+                     Please make user rDNS is enabled on your system. 
+                     Tip you can add your mail-server ip to your hosts-file.');
+    }
+        
     if(!$this->stream)
     {
       throw new Exception('unable to connect user "'.$this->username.'" to imap server: '.$adress);
