@@ -26,7 +26,7 @@
 class sfDataSourceImap extends sfDataSource
 {
   protected
-    $data = array();
+    $messages;
 
   protected 
     $sortColumn = null,
@@ -44,6 +44,51 @@ class sfDataSourceImap extends sfDataSource
     $mailboxName,
     $options;
 
+  public static function hydrate($header, $stream)
+  {
+    $message = new sfDSImapMessage(
+      $stream,
+      
+      isset($header->subject) ? self::mime_header_to_text($header->subject) : null,
+      self::mime_header_to_text($header->from),
+      isset($header->to) ? self::mime_header_to_text($header->to) : null, 
+      self::mime_header_to_text($header->date),
+      self::mime_header_to_text($header->message_id),
+      isset($header->references) ? self::mime_header_to_text($header->references) : null,
+      isset($header->in_reply_to) ? self::mime_header_to_text($header->in_reply_to) : null,
+      $header->size,
+      $header->uid,
+      $header->msgno,
+      $header->recent,
+      $header->flagged,
+      $header->answered,
+      $header->deleted,
+      $header->seen,
+      $header->draft
+    );
+    
+    return $message;
+  }
+  
+  /**
+   * Decodes MIME message header extensions that are non ASCII text (see » RFC2047). 
+   * 
+   * @param string $text
+   * @return string
+   */
+  protected static function mime_header_to_text($text)
+  {
+    $elements = imap_mime_header_decode($text);
+    
+    $returnText = "";
+    for($i = 0; $i < count($elements); $i++)
+    {
+      $returnText .= $elements[$i]->text . " ";
+    }
+    
+    return trim($returnText);
+  }  
+    
   /**
    * Constructor.
    *
@@ -136,25 +181,76 @@ class sfDataSourceImap extends sfDataSource
     }
   }
   
-  public function getMails($uids = false)
+  /**
+   * loads an array of hydrated messages
+   *
+   * @return array array of messages
+   */
+  
+  protected function loadMessages()
   {
-    if(!$this->stream)
+    // if nto yet loaded, get messages
+    if (!isset($this->messages))
     {
-      $this->connect();
-    }
-    
-    $num_mgs = imap_num_msg($this->stream);
-    $counter = 1;
-    while($counter <= $num_mgs)
-    {
-      if($message = $this->retrieve_message($this->stream, $counter, $uids))
+      if(!$this->stream)
       {
-        $berichten [$counter - 1] = $message;
-
+        $this->connect();
       }
-      $counter++;
+      
+      $this->messages = array();
+        
+      // test if sorting asc or descending
+      $reverse = ($this->sortOrder == self::DESC) ? 1 : 0; 
+  
+      // get translation for sorting
+      switch (strtolower($this->sortColumn))
+      {
+        case 'date':
+  //        $msgNrs = imap_sort($this->stream, SORTDATE, $reverse);
+          $msgNrs = imap_sort($this->stream, SORTARRIVAL, $reverse, SE_UID, $this->getFilterCriteria()); // or simply on arrivalID
+          break;
+        case 'from':
+          $msgNrs = imap_sort($this->stream, SORTFROM, $reverse, SE_UID, $this->getFilterCriteria());
+          break;
+        case 'to':
+          $msgNrs = imap_sort($this->stream, SORTTO, $reverse, SE_UID, $this->getFilterCriteria());
+          break;
+        case 'cc':
+          $msgNrs = imap_sort($this->stream, SORTCC, $reverse, SE_UID, $this->getFilterCriteria());
+          break;        
+        case 'subject':
+          $msgNrs = imap_sort($this->stream, SORTSUBJECT, $reverse, SE_UID, $this->getFilterCriteria());
+          break;
+        case 'size':
+          $msgNrs = imap_sort($this->stream, SORTSIZE, $reverse, SE_UID, $this->getFilterCriteria());
+          break;
+        default:
+          $filterCriteria = ($this->getFilterCriteria() != null) ? $this->getFilterCriteria() : 'ALL';
+          $msgNrs = imap_search($this->stream, $filterCriteria);
+          if ($this->sortOrder == self::DESC)
+          {
+            $msgNrs = array_reverse($msgNrs);
+          }
+          break;
+      }
+      
+// the alternatives:
+//      $header = imap_headerinfo($this->stream, $offset);
+//      return retrieve_message($this->stream, $offset))
+
+      $msgNrs = array_slice($msgNrs, $this->getOffset(), $this->getLimit());
+      $sequence = implode(',', $msgNrs);
+      $headers = imap_fetch_overview($this->stream, $sequence, FT_UID);
+      
+      foreach ($headers as $header)
+      {
+        $location = array_search($header->uid, $msgNrs); 
+        $this->messages[$location] = self::hydrate($header, $this->stream);
+      }
+
+      // sort to correct indexes.
+      ksort($this->messages);
     }
-    return $berichten;
   }  
     
   /**
@@ -167,72 +263,16 @@ class sfDataSourceImap extends sfDataSource
    */
   public function current()
   {
-    if(!$this->stream)
-    {
-      $this->connect();
-    }
-
+    // load mails
+    $this->loadMessages();
+    
     if (!$this->valid())
     {
       throw new OutOfBoundsException(sprintf('The result with index %s does not exist', $this->key()));
     }
 
-    // test if sorting asc or descending
-    $reverse = ($this->sortOrder == self::DESC) ? 1 : 0; 
-
-    $offset = $this->getOffset() + $this->key();
-    switch ($this->sortColumn)
-    {
-      case 'date':
-//        $msgNrs = imap_sort($this->stream, SORTDATE, $reverse);
-        $msgNrs = imap_sort($this->stream, SORTARRIVAL, $reverse); // or simply on arrivalID
-        $offset = $msgNrs[$offset];
-        break;
-      case 'fromaddress':
-        $msgNrs = imap_sort($this->stream, SORTFROM, $reverse);
-        $offset = $msgNrs[$offset];
-        break;
-      case 'toaddress':
-        $msgNrs = imap_sort($this->stream, SORTTO, $reverse);
-        $offset = $msgNrs[$offset];
-        break;
-      case 'ccaddress':
-        $msgNrs = imap_sort($this->stream, SORTCC, $reverse);
-        $offset = $msgNrs[$offset];
-        break;        
-      case 'subject':
-        $msgNrs = imap_sort($this->stream, SORTSUBJECT, $reverse);
-        $offset = $msgNrs[$offset];
-        break;
-      case 'size':
-        $msgNrs = imap_sort($this->stream, SORTSIZE, $reverse);
-        $offset = $msgNrs[$offset];
-        break;
-      default:
-        $offset += 1;
-        break;
-    }
-    
-    // TODO: hydrate message (maybe including attachement, if required)
-    return imap_header($this->stream, $offset);
+    return $this->messages[$this->key()];
   }
-  
-  /**
-   * TODO: explain
-   *
-   * @param string $text
-   * @return string
-   */
-  protected static function mine_header_to_text($text)
-  {
-    $elements = imap_mime_header_decode($text);
-    $returnText = "";
-    for($i = 0; $i < count($elements); $i++)
-    {
-      $returnText .= $elements [$i]->text . " ";
-    }
-    return trim($returnText);
-  }  
 
   /**
    * Returns the value of the given column in the current row returned by current()
@@ -244,7 +284,7 @@ class sfDataSourceImap extends sfDataSource
   {
     $current = $this->current();
     
-    return self::mine_header_to_text($current->$column);
+    return call_user_func(array($current, 'get'.$column));
   }
 
   /**
@@ -302,7 +342,11 @@ class sfDataSourceImap extends sfDataSource
     $criteria = '';
     foreach ($this->filters as $filter => $options)
     {
-      $criteria .= $filter . ' "'.$options['value'].'" ';
+      $criteria .= strtoupper($filter).' ';
+      if ($options['value'] != '')
+      {
+        $criteria .= '"'.$options['value'].'" ';
+      }
     }
     
     return $criteria;
