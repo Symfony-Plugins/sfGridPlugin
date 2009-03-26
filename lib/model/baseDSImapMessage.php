@@ -57,49 +57,97 @@ class baseDSImapMessage
   /**
    * Date and time of the message
    *
-   * @var string date
+   * @var string
    */
   protected $date;
     
   /**
    * The message identifier
    *
-   * @var int
+   * @var string
    */
   protected $msgId;
   
   /**
-   * TODO: PHP DOCUMENTATION for rest of the vars
    *
-   * @var unknown_type
+   * is a reference to this message id 
+   * 
+   * @var string
    */
   protected $reference;
+  
+  /**
+   * is a reply to this message id 
+   *
+   * @var string
+   */
   protected $replyTo;
-  protected $intSize;
+  
+  /**
+   * size in bytes
+   *
+   * @var int
+   */
+  protected $size;
+  
+  /**
+   * UID the message has in the mailbox 
+   *
+   * @var int
+   */
   protected $uid;
+  
+  /**
+   * message sequence number in the mailbox 
+   *
+   * @var int
+   */
   protected $msgno;
-  protected $blRecent;
-  protected $blFlagged;
-  protected $blAnswered;
-  protected $blDeleted;
-  protected $blSeen;
-  protected $blDraft;  
+  
+  /**
+   * this message is flagged as recent 
+   *
+   * @var bool
+   */
+  protected $recent;
+  
+  /**
+   * this message is flagged 
+   *
+   * @var bool
+   */
+  protected $flagged;
+  
+  /**
+   * this message is flagged as answered 
+   *
+   * @var bool
+   */
+  protected $answered;
+  
+  /**
+   * this message is flagged for deletion 
+   *
+   * @var bool
+   */
+  protected $deleted;
+  
+  /**
+   * this message is flagged as already read 
+   *
+   * @var bool
+   */
+  protected $seen;
+  
+  /**
+   *  this message is flagged as being a draft 
+   *
+   * @var bool
+   */
+  protected $draft;
   
 
-  /**
-   * CC Receiver(s) of the message
-   *
-   * @var string
-   */
-  protected $cc;
-  
-  /**
-   * BCC Receiver(s) of the message
-   *
-   * @var string
-   */
-  protected $bcc;  
-  
+
 
   /**
    * The structured part of the message 
@@ -114,6 +162,24 @@ class baseDSImapMessage
    * @var array
    */  
   protected $attachements;
+    
+  
+  //TODO:
+  /**
+   * CC Receiver(s) of the message
+   *
+   * @var string
+   */
+  protected $cc;
+  
+  //TODO:
+  /**
+   * BCC Receiver(s) of the message
+   *
+   * @var string
+   */
+  protected $bcc;  
+  
   
   /**
    * Constructor creating a new DSImapMessage object
@@ -126,15 +192,15 @@ class baseDSImapMessage
    * @param string $messageId Message-ID
    * @param string $reference is a reference to this message id
    * @param string $replyTo   
-   * @param int $intSize      size in bytes
-   * @param string $uid       UID the message has in the mailbox
-   * @param string $msgno     message sequence number in the mailbox 
-   * @param bool $blRecent
-   * @param bool $blFlagged
-   * @param bool $blAnswered
-   * @param bool $blDeleted
-   * @param bool $blSeen
-   * @param bool $blDraft
+   * @param int $size         size in bytes
+   * @param int $uid          UID the message has in the mailbox
+   * @param int $msgno        message sequence number in the mailbox 
+   * @param bool $recent
+   * @param bool $flagged
+   * @param bool $answered
+   * @param bool $deleted
+   * @param bool $seen
+   * @param bool $draft
    */
   public function __construct($stream,
                               $subject,
@@ -144,15 +210,15 @@ class baseDSImapMessage
                               $messageId,
                               $reference,
                               $replyTo,
-                              $intSize,
+                              $size,
                               $uid,
                               $msgno,
-                              $blRecent = false,
-                              $blFlagged = false,
-                              $blAnswered = false,
-                              $blDeleted = false,
-                              $blSeen = false,
-                              $blDraft = false)
+                              $recent = false,
+                              $flagged = false,
+                              $answered = false,
+                              $deleted = false,
+                              $seen = false,
+                              $draft = false)
   {
     $this->stream = $stream;
     
@@ -163,15 +229,15 @@ class baseDSImapMessage
     $this->messageId = $messageId;
     $this->reference = $reference;
     $this->replyTo   = $replyTo;
-    $this->intSize      = $intSize;
+    $this->size      = $size;
     $this->uid       = $uid;
     $this->msgno     = $msgno;
-    $this->blRecent     = $blRecent;
-    $this->blFlagged    = $blFlagged;
-    $this->blAnswered   = $blAnswered;
-    $this->blDeleted    = $blDeleted;
-    $this->blSeen       = $blSeen;
-    $this->blDraft      = $blDraft;
+    $this->recent     = $recent;
+    $this->flagged    = $flagged;
+    $this->answered   = $answered;
+    $this->deleted    = $deleted;
+    $this->seen       = $seen;
+    $this->draft      = $draft;
   }
 
   /**
@@ -189,6 +255,14 @@ class baseDSImapMessage
     return $this->structure;
   }
   
+  /**
+   * Gets an part of the body
+   *
+   * @param string $mimeType
+   * @param object $structure
+   * @param string $partNumber
+   * @return string part of the body if match found, else false
+   */
   protected function getPart($mimeType, $structure = false, $partNumber = false)
   {
     if (!$structure)
@@ -242,6 +316,11 @@ class baseDSImapMessage
     return false;
   }
 
+  /**
+   * Returns the body in HTML, if only plain available this gets converted to HTML
+   *
+   * @return string
+   */
   public function getBodyHtmlElsePlain()
   {
     $body = $this->getBodyHtml();
@@ -275,6 +354,11 @@ class baseDSImapMessage
     return $this->getPart(self::TYPE_HTML);
   }
   
+  /**
+   * returns an array of hydrated attachements for this message
+   *
+   * @return array[sfDSImapAttachement]
+   */
   public function getAttachments()
   {
     if (!isset($this->attachements))
@@ -327,34 +411,174 @@ class baseDSImapMessage
     return $this->attachements;
   }
   
-  public function getAttachementCount()
+  /**
+   * the number of attachements for this message
+   *
+   * @return int the number of attachements for this message
+   */
+  public function getAttachmentCount()
   {
     return count($this->getAttachments());
   }
 
+  /**
+   * the messages subject 
+   *
+   * @return string
+   */
   public function getSubject()
   {
     return $this->subject;
   }  
   
+  /**
+   * who sent it 
+   *
+   * @return string
+   */
   public function getFrom()
   {
     return $this->from;
   }
   
+  /**
+   * recipient 
+   *
+   * @return string
+   */
   public function getTo()
   {
     return $this->to;
   }
   
+  /**
+   * when was it sent 
+   *
+   * @return string
+   */
   public function getDate()
   {
     return $this->date;
   }
  
+  /**
+   * Message-ID 
+   *
+   * @return string
+   */
+  public function getMsgId()
+  {
+    return $this->msgId;
+  }
+  
+  /**
+   * is a reference to this message id 
+   *
+   * @return string
+   */
+  public function getReference() 
+  {
+    return $this->reference;
+  }
+  
+  /**
+   * is a reply to this message id 
+   *
+   * @return string
+   */
+  public function getReplyTo() 
+  {
+    return $this->replyTo;
+  }
+  
+  /**
+   * size in bytes 
+   *
+   * @return int
+   */
+  public function getSize() 
+  {
+    return $this->size;
+  }
+  
+  /**
+   * UID the message has in the mailbox 
+   *
+   * @return int
+   */
   public function getUid()
   {
     return $this->uid;
+  }
+  
+  /**
+   * message sequence number in the mailbox 
+   *
+   * @return int
+   */
+  public function getMsgno() 
+  {
+    return $this->msgno;
+  }
+  
+  /**
+   * this message is flagged as recent 
+   *
+   * @return bool
+   */
+  public function getRecent() 
+  {
+    return $this->recent;
+  }
+  
+  /**
+   * this message is flagged 
+   *
+   * @return bool
+   */
+  public function getFlagged() 
+  {
+    return $this->flagged;
+  }
+  
+  /**
+   * this message is flagged as answered 
+   *
+   * @return bool
+   */
+  public function getAnswered() 
+  {
+    return $this->answered;
+  }
+  
+  /**
+   * this message is flagged for deletion
+   *
+   * @return bool
+   */
+  public function getDeleted() 
+  {
+    return $this->deleted;
+  }
+  
+  /**
+   * this message is flagged as already read 
+   *
+   * @return bool
+   */
+  public function getSeen() 
+  {
+    return $this->seen;
+  }
+  
+  /**
+   * this message is flagged as being a draft 
+   *
+   * @return bool
+   */
+  public function getDraft() 
+  {
+    return $this->draft;
   }
   
 }
