@@ -23,18 +23,18 @@ class baseDSImapAttachement
   protected $mimeType = '';
     
   /**
-   * The binary attachment
+   * The data of the attachment
    *
-   * @var binary
+   * @var mixed
    */
-  protected $binData = null;
+  protected $data = null;
   
   
-  public function __construct($filename, $mimeType, $binData)
+  public function __construct($filename, $mimeType, $data)
   {
     $this->filename = $filename;
     $this->mimeType = $mimeType;
-    $this->binData  = $binData;
+    $this->data     = $data;
   }
   
   public function getFilename()
@@ -49,7 +49,7 @@ class baseDSImapAttachement
   
   public function GetData()
   {
-    return $this->binData;
+    return $this->data;
   }
   
 }

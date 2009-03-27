@@ -14,7 +14,18 @@
  *
  * 
  * <code>
- * $source = new sfDataSourceImap(TODO);
+ * $username = 'user';
+ * $password = 'pass';
+ * $host = '127.0.0.1';
+ * $port = 143;
+ * $mailboxName = 'Inbox;
+ * $options = array('notls');
+ * $imapMessages = new sfDataSourceImap($username, $password, $host, $port, $mailboxName, $options);
+ * 
+ * foreach ($imapMessages as $message)
+ * {
+ *   echo $message->getSubject();
+ * }
  * </code>
  *
  *
@@ -25,17 +36,45 @@
  */
 class sfDataSourceImap extends sfDataSource
 {
+  /**
+   * an array that holds (a page of) the messages retreived 
+   * from the imap connection
+   *
+   * @var array[sfDSImapMessage]
+   */
   protected
     $messages;
 
+  /**
+   * The sort properties
+   *
+   * @var string
+   */
   protected 
     $sortColumn = null,
     $sortOrder = null;
-    
+  
+  /**
+   * An array with filter properties
+   *
+   * @see sfDataSourceInterface::setFilter()
+   * 
+   * @var array
+   */
   protected $filters;
-    
+  
+  /**
+   * The stream to the imap-server
+   *
+   * @var resource
+   */
   protected $stream;
   
+  /**
+   * Connection properties
+   *
+   * @var string/int
+   */
   protected
     $username,
     $password,
@@ -44,6 +83,13 @@ class sfDataSourceImap extends sfDataSource
     $mailboxName,
     $options;
 
+  /**
+   * hydrates an sfDSImapMessage
+   *
+   * @param object $header
+   * @param resource $stream
+   * @return sfDSImapMessage
+   */
   public static function hydrate($header, $stream)
   {
     $message = new sfDSImapMessage(
@@ -182,14 +228,12 @@ class sfDataSourceImap extends sfDataSource
   }
   
   /**
-   * loads an array of hydrated messages
+   * loads an array of hydrated (sfDSImapMessage) messages
    *
-   * @return array array of messages
    */
-  
   protected function loadMessages()
   {
-    // if nto yet loaded, get messages
+    // if not yet loaded, get messages
     if (!isset($this->messages))
     {
       if(!$this->stream)
@@ -332,6 +376,11 @@ class sfDataSourceImap extends sfDataSource
     return $nrMessages;
   }
   
+  /**
+   * Translates the array of filter properties to a imap-criteria
+   *
+   * @return string
+   */
   protected function getFilterCriteria()
   {
     if (count($this->filters) == 0)

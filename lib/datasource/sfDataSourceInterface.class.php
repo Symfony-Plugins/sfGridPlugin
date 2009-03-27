@@ -100,8 +100,8 @@ interface sfDataSourceInterface extends SeekableIterator, ArrayAccess, Countable
   public function setSort($column, $order = sfDataSourceInterface::ASC);
 
   /**
-   * An associative array of field-names with an associative array of
-   * array('value' => $value, 'operator' => $operator) pairs
+   * An associative array of field-names with an associative array of value/operator-pairs
+   * array(field => array('value' => $value, 'operator' => $operator))
    *
    * field names can match column-names but the implementation is up to you.
    *

@@ -12,10 +12,32 @@ class baseDSImapMessage
 {
   const TYPE_PLAIN = 'TEXT/PLAIN';
   const TYPE_HTML  = 'TEXT/HTML';
-
+  
+  const FLAG_SEEN     = '\Seen';
+  const FLAG_ASNWERED = '\Answered';
+  const FLAG_FLAGGED  = '\Flagged';
+  const FLAG_DELETED  = '\Deleted';
+  const FLAG_DRAFT    = '\Draft';
+  
+  const ENCODING_7BIT             = 0;
+  const ENCODING_8BIT             = 1;
+  const ENCODING_BINARY           = 2;
+  const ENCODING_BASE64           = 3;
+  const ENCODING_QUOTED_PRINTABLE = 4;
+  const ENCODING_OTHER            = 5;
+  
+  const MIME_TEXT_ID        = 0; const MIME_TEXT         = "TEXT";
+  const MIME_MULTIPART_ID   = 1; const MIME_MULTIPART    = "MULTIPART";
+  const MIME_MESSAGE_ID     = 2; const MIME_MESSAGE      = "MESSAGE";
+  const MIME_APPLICATION_ID = 3; const MIME_APPLICATION  = "APPLICATION";
+  const MIME_AUDIO_ID       = 4; const MIME_AUDIO        = "AUDIO";
+  const MIME_IMAGE_ID       = 5; const MIME_IMAGE        = "IMAGE";
+  const MIME_VIDEO_ID       = 6; const MIME_VIDEO        = "VIDEO";
+  const MIME_OTHER_ID       = 7; const MIME_OTHER        = "OTHER";
+  
   public static function getMimeType($structure) 
   {
-   $primary_mime_type = array("TEXT", "MULTIPART","MESSAGE", "APPLICATION", "AUDIO","IMAGE", "VIDEO", "OTHER");
+   $primary_mime_type = array(self::MIME_TEXT, self::MIME_MULTIPART, self::MIME_MESSAGE, self::MIME_APPLICATION, self::MIME_AUDIO, self::MIME_IMAGE, self::MIME_VIDEO, self::MIME_OTHER);
    
    if($structure->subtype) 
    {
@@ -255,6 +277,41 @@ class baseDSImapMessage
     return $this->structure;
   }
   
+  protected function createPartArray($structure, $prefix = "")
+  {
+    $part_array = array();
+    
+    if (isset($structure->parts))
+    {
+      foreach ( $structure->parts as $count => $part )
+      {
+        $this->addPartToArray($part, $prefix . ($count + 1), $part_array);
+      }
+    }
+    
+    return $part_array;
+  }
+  
+  protected function addPartToArray($obj, $partno, &$part_array)
+  {
+    if($obj->type == self::MIME_MESSAGE_ID)
+    {
+      $this->addPartToArray($obj->parts[0], $partno . ".", & $part_array);
+    } 
+    else
+    {
+      if (isset($structure->parts))
+      {
+        foreach ( $obj->parts as $count => $p )
+        {
+          $this->addPartToArray($p, $partno . "." . ($count + 1), $part_array);
+        }
+      }
+    }
+    
+    $part_array[] = array('part_number' => $partno, 'part_object' => $obj);
+  }
+  
   /**
    * Gets an part of the body
    *
@@ -278,16 +335,16 @@ class baseDSImapMessage
         {
           $partNumber = "1";
         }
-        $text = imap_fetchbody($this->stream, $this->uid, $partNumber, FT_UID);
+        $text = imap_fetchbody($this->stream, $this->uid, $partNumber, FT_UID | FT_PEEK);
         
-        if($structure->encoding == 3) 
+        if($structure->encoding == self::ENCODING_BASE64) 
         {
           return imap_base64($text);
         }
-        else if($structure->encoding == 4) 
+        else if($structure->encoding == self::ENCODING_QUOTED_PRINTABLE) 
         {
           return imap_qprint($text);
-        } 
+        }
         else 
         {
           return $text;
@@ -295,9 +352,9 @@ class baseDSImapMessage
       }
    
       // search recursively through multipart
-      if($structure->type == 1) 
+      if($structure->type == self::MIME_MULTIPART_ID) 
       {
-        while(list($index, $subStructure) = each($structure->parts)) 
+        foreach($structure->parts as $index => $subStructure) 
         {
           $prefix = '';
           if($partNumber) 
@@ -313,7 +370,7 @@ class baseDSImapMessage
       }
     }
     
-    return false;
+    return false; // TODO: maybe throw exception instead!
   }
 
   /**
@@ -366,44 +423,66 @@ class baseDSImapMessage
       $this->attachements = array();
       
       $structure = $this->getStructure();
-      $contentParts = 0;
-      if (isset($structure->parts))
+      $partArray = $this->createPartArray($structure);
+      
+      //skip first (which should be body)
+      array_shift($partArray);
+      
+      foreach($partArray as $item)
       {
-        $contentParts = sizeof($structure->parts);
-      }
-   
-      if ($contentParts > 1) 
-      {
-        for ($i=1; $i<$contentParts; $i++) 
+        $key = $item['part_number'];
+        $part = $item['part_object'];
+        
+        $filename = null;
+        
+        // try to get filename from D-parameters
+        if (isset($part->dparameters ))
         {
-          $part = $structure->parts[$i];
-          
-          $filename = '';
-          if (strtolower($part->parameters[0]->value) == "us-ascii") 
+          foreach ($part->dparameters as $dPar)
           {
-            if ($part->parameters[1]->value != "") 
+            if(strtoupper($dPar->attribute) == "FILENAME" || strtoupper($dPar->attribute) == "NAME")
             {
-              $filename = $part->parameters[1]->value;
+              if(!empty($dPar->value))
+              {
+                $filename = $dPar->value;
+                break;
+              }
             }
           }
-          else if (strtolower($part->parameters[0]->value) != "iso-8859-1") 
+        }
+        
+        // try to get filename from parameters
+        if($filename == null)
+        {
+          foreach ($part->parameters as $par)
           {
-            $filename = $part->parameters[0]->value;
+            if(strtoupper($par->attribute) == "FILENAME" || strtoupper($par->attribute) == "NAME")
+            {
+              if(!empty($par->value))
+              {
+                $filename = $par->value;
+                break;
+              }
+            }
           }
-          
+        }
+            
+        // if filename found, fetch body
+        if($filename != null)
+        {
           $mimeType = self::getMimeType($part);
-          
-          $binData = imap_fetchbody($this->stream, $this->uid, $i+1, FT_UID);
-          if (strtolower(substr($mimeType, 0, 4)) == "text")
+
+          $data = imap_fetchbody($this->stream, $this->uid, $key, FT_UID | FT_PEEK);
+          if($part->encoding == self::ENCODING_BASE64) 
           {
-            $binData = imap_qprint($binData);
-          } 
-          else 
+            $data = imap_base64($data);
+          }
+          else if($structure->encoding == self::ENCODING_QUOTED_PRINTABLE)
           {
-            $binData = imap_base64($binData);
+            $data = imap_qprint($data);
           }
           
-          $this->attachements[] = new sfDSImapAttachement($filename, $mimeType, $binData);
+          $this->attachements[] = new sfDSImapAttachement($filename, $mimeType, $data);
         }
       }
     }
@@ -570,6 +649,12 @@ class baseDSImapMessage
   {
     return $this->seen;
   }
+  
+  public function setSeen() 
+  {
+    imap_setflag_full($this->stream, $this->uid, self::FLAG_SEEN, ST_UID);
+    $this->seen = true;
+  }  
   
   /**
    * this message is flagged as being a draft 
