@@ -499,6 +499,15 @@ class baseDSImapMessage
   {
     return count($this->getAttachments());
   }
+  
+  /**
+   * marks the message as deleted
+   *
+   */
+  public function delete()
+  {
+    imap_delete($this->stream, $this->uid, FT_UID);
+  }
 
   /**
    * the messages subject 
@@ -619,6 +628,26 @@ class baseDSImapMessage
   {
     return $this->flagged;
   }
+
+  /**
+   * Mark the message as marked/flagged
+   *
+   */
+  public function setFlagged() 
+  {
+    imap_setflag_full($this->stream, $this->uid, self::FLAG_FLAGGED, ST_UID);
+    $this->flagged = true;
+  }
+
+  /**
+   * Mark the message as unmarked/unflagged
+   *
+   */
+  public function setUnflagged() 
+  {
+    imap_clearflag_full($this->stream, $this->uid, self::FLAG_FLAGGED, ST_UID);
+    $this->flagged = false;
+  }  
   
   /**
    * this message is flagged as answered 
@@ -650,11 +679,25 @@ class baseDSImapMessage
     return $this->seen;
   }
   
+  /**
+   * Mark the message as read/seen
+   *
+   */
   public function setSeen() 
   {
     imap_setflag_full($this->stream, $this->uid, self::FLAG_SEEN, ST_UID);
     $this->seen = true;
-  }  
+  }
+
+  /**
+   * Mark the message as unread/unseen
+   *
+   */
+  public function setUnseen() 
+  {
+    imap_clearflag_full($this->stream, $this->uid, self::FLAG_SEEN, ST_UID);
+    $this->seen = false;
+  }
   
   /**
    * this message is flagged as being a draft 

@@ -55,6 +55,13 @@ class sfDataSourceImap extends sfDataSource
     $sortOrder = null;
   
   /**
+   * flag that defines if to retreive removed messages as well
+   *
+   * @var bool
+   */
+  protected $showDeleted;
+  
+  /**
    * An array with filter properties
    *
    * @see sfDataSourceInterface::setFilter()
@@ -105,12 +112,12 @@ class sfDataSourceImap extends sfDataSource
       $header->size,
       $header->uid,
       $header->msgno,
-      $header->recent,
-      $header->flagged,
-      $header->answered,
-      $header->deleted,
-      $header->seen,
-      $header->draft
+      ($header->recent == 0) ? false : true,
+      ($header->flagged == 0) ? false : true,
+      ($header->answered == 0) ? false : true,
+      ($header->deleted == 0) ? false : true,
+      ($header->seen == 0) ? false : true,
+      ($header->draft == 0) ? false : true
     );
     
     return $message;
@@ -144,11 +151,12 @@ class sfDataSourceImap extends sfDataSource
    * @param integer $port        the port
    * @param string  $mailboxName the mailbox-name 
    * @param array   $options     an array with options
+   * @param bool    $showDeleted a flag that defines if you want to retreive delete messages as well
    *   
    * @throws InvalidArgumentException  Throws an exception if the given array
    *                                   is not formatted correctly
    */
-  public function __construct($username, $password, $host, $port, $mailboxName, array $options)
+  public function __construct($username, $password, $host, $port, $mailboxName, array $options, $showDeleted = false)
   {
     if(!extension_loaded('imap')) throw new Exception('IMAP extension needed for this class');
     
@@ -158,6 +166,7 @@ class sfDataSourceImap extends sfDataSource
     $this->port        = $port;
     $this->mailboxName = $mailboxName;    
     $this->options     = $options;
+    $this->showDeleted = $showDeleted;
   }
 
   /**
@@ -181,7 +190,7 @@ class sfDataSourceImap extends sfDataSource
     $time = time();
     // IF THIS IS SLOW, PLEASE MAKE SURE rDNS IS ENALBED ON YOUR SYSTEM 
     // (one solution is to place the ip of your mail-server in your /etc/hosts file) 
-    $this->stream = imap_open($adress, $this->username, $this->password, OP_DEBUG, 0);
+    $this->stream = imap_open($adress, $this->username, $this->password);
     $time = (time()-$time);
     if ($time >= 4)
     {
@@ -197,6 +206,21 @@ class sfDataSourceImap extends sfDataSource
     }
   }
   
+  /**
+   * returns the connection, makes a connection if not already done
+   *
+   * @return resource
+   */
+  public function getConnection()
+  {
+    if(!$this->stream)
+    {
+      $this->connect();
+    }
+    
+    return $this->stream;
+  }  
+    
   /**
    * Closes the imap Connection
    *
@@ -236,16 +260,16 @@ class sfDataSourceImap extends sfDataSource
     // if not yet loaded, get messages
     if (!isset($this->messages))
     {
-      if(!$this->stream)
+      $this->getConnection();
+      
+      // test if sorting asc or descending
+      $reverse = ($this->sortOrder == self::DESC) ? 1 : 0;
+
+      if (!$this->showDeleted)
       {
-        $this->connect();
+        $this->filters['UNDELETED'] = array('value' => '');
       }
       
-      $this->messages = array();
-        
-      // test if sorting asc or descending
-      $reverse = ($this->sortOrder == self::DESC) ? 1 : 0; 
-  
       // get translation for sorting
       switch (strtolower($this->sortColumn))
       {
@@ -278,25 +302,69 @@ class sfDataSourceImap extends sfDataSource
           break;
       }
       
+      // use the offset and limit
+      $msgNrs = array_slice($msgNrs, $this->getOffset(), $this->getLimit());
+      
+      // used for the iterator
+      $this->messages = $this->getByIds($msgNrs, $this->showDeleted);
+    }
+  }
+
+  /**
+   * gets an message from the mailbox
+   *
+   * @param int $uid
+   * @return sfDSImapMessage or null if no results
+   */
+  public function getById($uid)
+  {
+    $imapBerichten = $this->getByIds(array($uid));
+    
+    if (count($imapBerichten) == 0)
+    {
+      $imapBericht = null;
+    }
+    else
+    {
+      $imapBericht = $imapBerichten[0];
+    }
+    
+    return $imapBericht;    
+  }
+  
+  /**
+   * returns an array of messages by UID
+   * 
+   * this method doesn't influence the iterator, 
+   * nor does it care about the sorting, filtering, offset and limit of this datasource
+   *
+   * @param array $uids
+   * @return array[sfDSImapMessage]
+   */
+  public function getByIds($uids)
+  {
 // the alternatives:
 //      $header = imap_headerinfo($this->stream, $offset);
 //      return retrieve_message($this->stream, $offset))
-
-      $msgNrs = array_slice($msgNrs, $this->getOffset(), $this->getLimit());
-      $sequence = implode(',', $msgNrs);
-      $headers = imap_fetch_overview($this->stream, $sequence, FT_UID);
-      
-      foreach ($headers as $header)
-      {
-        $location = array_search($header->uid, $msgNrs); 
-        $this->messages[$location] = self::hydrate($header, $this->stream);
-      }
-
-      // sort to correct indexes.
-      ksort($this->messages);
-    }
-  }  
+    $this->getConnection();
+    $messages = array();
     
+    $sequence = implode(',', $uids);
+    $headers = imap_fetch_overview($this->stream, $sequence, FT_UID);
+    
+    // place in new array to reorden
+    foreach ($headers as $header)
+    {
+      $location = array_search($header->uid, $uids); 
+      $messages[$location] = self::hydrate($header, $this->stream);
+    }
+
+    // sort according to specified indexes.
+    ksort($messages);
+    
+    return $messages;
+  }
+  
   /**
    * Returns the current row while iterating. If the internal row pointer does
    * not point at a valid row, an exception is thrown.
@@ -352,16 +420,13 @@ class sfDataSourceImap extends sfDataSource
 
     return $this->getLimit()==0 ? $count : min($this->getLimit(), $count);
   }
-
+  
   /**
    * @see sfDataSourceInterface::countAll()
    */
   public function countAll()
   {
-    if(!$this->stream)
-    {
-      $this->connect();
-    }
+    $this->getConnection();
     
     $filterCriteria = $this->getFilterCriteria();
     if ($filterCriteria != null)
@@ -400,7 +465,7 @@ class sfDataSourceImap extends sfDataSource
     
     return $criteria;
   }
-
+  
   /**
    * @see sfDataSourceInterface::requireColumn()
    */

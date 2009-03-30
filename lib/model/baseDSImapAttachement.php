@@ -47,7 +47,7 @@ class baseDSImapAttachement
     return $this->getMimeType();
   }
   
-  public function GetData()
+  public function getData()
   {
     return $this->data;
   }
