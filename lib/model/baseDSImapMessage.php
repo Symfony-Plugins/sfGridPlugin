@@ -88,7 +88,7 @@ class baseDSImapMessage
    *
    * @var string
    */
-  protected $msgId;
+  protected $messageId;
   
   /**
    *
@@ -544,9 +544,20 @@ class baseDSImapMessage
    *
    * @return string
    */
-  public function getDate()
+  public function getDate($format = 'Y-m-d H:i:s')
   {
-    return $this->date;
+    if ($this->date === null) {
+      return null;
+    }
+    
+    if ($format == null)
+    {
+      return $this->date;
+    }
+    else 
+    {
+      return $this->date->format($format);
+    }
   }
  
   /**
@@ -554,9 +565,9 @@ class baseDSImapMessage
    *
    * @return string
    */
-  public function getMsgId()
+  public function getMessageId()
   {
-    return $this->msgId;
+    return $this->messageId;
   }
   
   /**

@@ -105,7 +105,7 @@ class sfDataSourceImap extends sfDataSource
       isset($header->subject) ? self::mime_header_to_text($header->subject) : null,
       self::mime_header_to_text($header->from),
       isset($header->to) ? self::mime_header_to_text($header->to) : null, 
-      self::mime_header_to_text($header->date),
+      new DateTime($header->date),
       self::mime_header_to_text($header->message_id),
       isset($header->references) ? self::mime_header_to_text($header->references) : null,
       isset($header->in_reply_to) ? self::mime_header_to_text($header->in_reply_to) : null,
@@ -294,7 +294,7 @@ class sfDataSourceImap extends sfDataSource
           break;
         default:
           $filterCriteria = ($this->getFilterCriteria() != null) ? $this->getFilterCriteria() : 'ALL';
-          $msgNrs = imap_search($this->stream, $filterCriteria);
+          $msgNrs = imap_search($this->stream, $filterCriteria, SE_UID);
           if ($this->sortOrder == self::DESC)
           {
             $msgNrs = array_reverse($msgNrs);
@@ -303,7 +303,10 @@ class sfDataSourceImap extends sfDataSource
       }
       
       // use the offset and limit
-      $msgNrs = array_slice($msgNrs, $this->getOffset(), $this->getLimit());
+      if ($this->getLimit())
+      {
+        $msgNrs = array_slice($msgNrs, $this->getOffset(), $this->getLimit());
+      }
       
       // used for the iterator
       $this->messages = $this->getByIds($msgNrs, $this->showDeleted);
@@ -431,7 +434,7 @@ class sfDataSourceImap extends sfDataSource
     $filterCriteria = $this->getFilterCriteria();
     if ($filterCriteria != null)
     {
-      $nrMessages = count(imap_search($this->stream, $filterCriteria));
+      $nrMessages = count(imap_search($this->stream, $filterCriteria, SE_UID));
     }
     else
     {

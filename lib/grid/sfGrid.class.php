@@ -117,8 +117,18 @@ class sfGrid implements Countable
 
     foreach ($columns as $column)
     {
-      $this->setWidget($column, new sfWidgetText());
+      $this->setWidget($column, $this->getDefaultWidget());
     }
+  }
+  
+  /**
+   * Returns the default widget
+   *
+   * @return sfWidget
+   */
+  protected function getDefaultWidget()
+  {
+    return new sfWidgetText();
   }
 
   /**
