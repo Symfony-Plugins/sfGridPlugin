@@ -63,8 +63,13 @@ class sfGridFormatterHtmlRow implements ArrayAccess
       if ($widget->getOption('tdCss'))
       {
         $arrOptions['class'] = $widget->getOption('tdCss');
+        $widget->setOption('tdCss', null); // reset for next row
       }
-      
+      if ($widget->getOption('tdTitle'))
+      {
+        $arrOptions['title'] = $widget->getOption('tdTitle');
+        $widget->setOption('tdTitle', null); // reset for next row
+      }      
       $data .= '  '.$widget->renderContentTag('td',
                                          $tagBody,
                                          $arrOptions)
