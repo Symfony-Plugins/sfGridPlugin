@@ -253,6 +253,8 @@ class sfDataSourceImap extends sfDataSource
   
   /**
    * loads an array of hydrated (sfDSImapMessage) messages
+   * 
+   * there now is limited support for filtering with ORs 
    *
    */
   protected function loadMessages()
@@ -265,41 +267,90 @@ class sfDataSourceImap extends sfDataSource
       // test if sorting asc or descending
       $reverse = ($this->sortOrder == self::DESC) ? 1 : 0;
 
-      if (!$this->showDeleted)
-      {
-        $this->filters['UNDELETED'] = array('value' => '');
-      }
+      $filterCriteria = $this->getFilterCriteria();
+      $sortColumn = strtolower($this->sortColumn);
+      
+      // lookup table for imap-header-property-names to imap-sort-constant 
+      $sortMapping = array(
+        'date'    => SORTARRIVAL,
+        'from'    => SORTFROM,
+        'to'      => SORTTO,
+        'cc'      => SORTCC,
+        'subject' => SORTSUBJECT,
+        'size'    => SORTSIZE,
+      );
       
       // get translation for sorting
-      switch (strtolower($this->sortColumn))
+      if (isset($sortMapping[$sortColumn]))
       {
-        case 'date':
-  //        $msgNrs = imap_sort($this->stream, SORTDATE, $reverse);
-          $msgNrs = imap_sort($this->stream, SORTARRIVAL, $reverse, SE_UID, $this->getFilterCriteria()); // or simply on arrivalID
-          break;
-        case 'from':
-          $msgNrs = imap_sort($this->stream, SORTFROM, $reverse, SE_UID, $this->getFilterCriteria());
-          break;
-        case 'to':
-          $msgNrs = imap_sort($this->stream, SORTTO, $reverse, SE_UID, $this->getFilterCriteria());
-          break;
-        case 'cc':
-          $msgNrs = imap_sort($this->stream, SORTCC, $reverse, SE_UID, $this->getFilterCriteria());
-          break;        
-        case 'subject':
-          $msgNrs = imap_sort($this->stream, SORTSUBJECT, $reverse, SE_UID, $this->getFilterCriteria());
-          break;
-        case 'size':
-          $msgNrs = imap_sort($this->stream, SORTSIZE, $reverse, SE_UID, $this->getFilterCriteria());
-          break;
-        default:
-          $filterCriteria = ($this->getFilterCriteria() != null) ? $this->getFilterCriteria() : 'ALL';
-          $msgNrs = imap_search($this->stream, $filterCriteria, SE_UID);
-          if ($this->sortOrder == self::DESC)
+        // regular search
+        if (!is_array($filterCriteria))
+        {
+          $msgNrs = imap_sort($this->stream, $sortMapping[$sortColumn], $reverse, SE_UID, $filterCriterion);
+        }
+        // support for OR in search
+        else
+        {
+          // get all messages
+          $allMsgNrs = imap_sort($this->stream, $sortMapping[$sortColumn], $reverse, SE_UID);
+          $results = array();
+          
+          // request results for every or
+          foreach ($filterCriteria as $filterCriterion)
           {
-            $msgNrs = array_reverse($msgNrs);
+            $newResults = imap_sort($this->stream, $sortMapping[$sortColumn], $reverse, SE_UID, $filterCriterion);
+            // do a union with previous results
+            if ($result != false)
+            {
+              $results = array_merge($results, $newResults);
+            }
           }
-          break;
+          
+          // return the intersection
+          $msgNrs = array_intersect($allMsgNrs, $results); 
+        }
+      }
+      else
+      {
+        $filterCriteria = ($filterCriteria != null) ? $filterCriteria : 'ALL';
+        
+        // regular search
+        if (!is_array($filterCriteria))
+        {
+          $msgNrs = imap_search($this->stream, $filterCriteria, SE_UID);          
+        }
+        // support for OR in search
+        else
+        {
+          // get all messages
+          $allMsgNrs = imap_search($this->stream, 'ALL', SE_UID);
+          $results = array();
+          
+          // request results for every or
+          foreach ($filterCriteria as $filterCriterion)
+          {
+            $newResults = imap_search($this->stream, $filterCriterion, SE_UID);
+            // do a union with previous results
+            if ($newResults != false)
+            {
+              $results = array_merge($results, $newResults);
+            }
+          }
+          
+          // return the intersection
+          $msgNrs = array_intersect($allMsgNrs, $results); 
+        }        
+        
+        if ($this->sortOrder == self::DESC)
+        {
+          $msgNrs = array_reverse($msgNrs);
+        }
+      }
+      
+      // if no results found, set to empty array
+      if ($msgNrs == false)
+      {
+        $msgNrs = array();
       }
       
       // use the offset and limit
@@ -432,10 +483,46 @@ class sfDataSourceImap extends sfDataSource
     $this->getConnection();
     
     $filterCriteria = $this->getFilterCriteria();
+    // if a filter has been set, count filtered
     if ($filterCriteria != null)
     {
-      $nrMessages = count(imap_search($this->stream, $filterCriteria, SE_UID));
+      // regular search
+      if (!is_array($filterCriteria))
+      {
+        $msgNrs = imap_search($this->stream, $filterCriteria, SE_UID);          
+      }
+      // support for OR in search
+      else
+      {
+        // get all messages
+        $allMsgNrs = imap_search($this->stream, 'ALL', SE_UID);
+        $results = array();
+        
+        // request results for every or
+        foreach ($filterCriteria as $filterCriterion)
+        {
+          $newResults = imap_search($this->stream, $filterCriterion, SE_UID);
+          // do a union with previous results
+          if ($newResults != false)
+          {
+            $results = array_merge($results, $newResults);
+          }
+        }
+        
+        // return the intersection
+        $msgNrs = array_intersect($allMsgNrs, $results); 
+      }      
+      
+      if ($msgNrs == false)
+      {
+        $nrMessages = 0;
+      } 
+      else
+      {
+        $nrMessages = count($msgNrs);
+      }
     }
+    // else count all
     else
     {
       $nrMessages = imap_num_msg($this->stream);  
@@ -447,26 +534,39 @@ class sfDataSourceImap extends sfDataSource
   /**
    * Translates the array of filter properties to a imap-criteria
    *
+   * you can extend this class and make this function return an array to add
+   * (limited) support for OR operations, by returning an array, instead of a string
+   * see also loadMessages and countAll
+   * 
+   * by default we return a string, which contains only AND operations
+   * 
    * @return string
    */
   protected function getFilterCriteria()
   {
+    if (!$this->showDeleted)
+    {
+      $this->filters['UNDELETED'] = array('value' => '');
+    }
+          
     if (count($this->filters) == 0)
     {
       return null;
     }
     
-    $criteria = '';
+    $criteria = array();
     foreach ($this->filters as $filter => $options)
     {
-      $criteria .= strtoupper($filter).' ';
+      $criterium = strtoupper($filter);
       if ($options['value'] != '')
       {
-        $criteria .= '"'.$options['value'].'" ';
+        $criterium .= ' "'.$options['value'].'"';
       }
+      
+      $criteria[] = $criterium;
     }
     
-    return $criteria;
+    return implode(' ', $criteria);
   }
   
   /**

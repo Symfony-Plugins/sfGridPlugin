@@ -29,12 +29,19 @@ class baseDSImapAttachement
    */
   protected $data = null;
   
+  /**
+   * The size of the attachement in bytes
+   *
+   * @var int
+   */
+  protected $size = 0;
   
-  public function __construct($filename, $mimeType, $data)
+  public function __construct($filename, $mimeType, $data, $size)
   {
     $this->filename = $filename;
     $this->mimeType = $mimeType;
     $this->data     = $data;
+    $this->size     = $size;
   }
   
   public function getFilename()
@@ -44,12 +51,23 @@ class baseDSImapAttachement
   
   public function getMimeType()
   {
-    return $this->getMimeType();
+    return $this->mimeType;
   }
   
   public function getData()
   {
     return $this->data;
+  }
+  
+  /**
+   * Returns the size of the attachement in bytes
+   *
+   * @return int
+   * 
+   */
+  public function getSize()
+  {
+    return $this->size;
   }
   
 }

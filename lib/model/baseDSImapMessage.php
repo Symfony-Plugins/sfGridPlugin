@@ -445,6 +445,7 @@ class baseDSImapMessage
               if(!empty($dPar->value))
               {
                 $filename = $dPar->value;
+                $size = $part->bytes;
                 break;
               }
             }
@@ -461,6 +462,8 @@ class baseDSImapMessage
               if(!empty($par->value))
               {
                 $filename = $par->value;
+                var_dump($par);
+                $size = ceil(($par->bytes/1024));
                 break;
               }
             }
@@ -482,7 +485,7 @@ class baseDSImapMessage
             $data = imap_qprint($data);
           }
           
-          $this->attachements[] = new sfDSImapAttachement($filename, $mimeType, $data);
+          $this->attachements[] = new sfDSImapAttachement($filename, $mimeType, $data, $size);
         }
       }
     }
