@@ -190,7 +190,7 @@ class sfDataSourceImap extends sfDataSource
     $time = time();
     // IF THIS IS SLOW, PLEASE MAKE SURE rDNS IS ENALBED ON YOUR SYSTEM 
     // (one solution is to place the ip of your mail-server in your /etc/hosts file) 
-    $this->stream = imap_open($adress, $this->username, $this->password);
+    $this->stream = @imap_open($adress, $this->username, $this->password);
     $time = (time()-$time);
     if ($time >= 4)
     {
@@ -202,7 +202,7 @@ class sfDataSourceImap extends sfDataSource
         
     if(!$this->stream)
     {
-      throw new Exception('unable to connect user "'.$this->username.'" to imap server: '.$adress);
+      throw new sfDataSourceImapConnectionException('unable to connect user "'.$this->username.'" to imap server: '.$adress);
     }
   }
   
