@@ -120,9 +120,11 @@ class SfPeerBuilderDS extends SfPeerBuilder
       $lfMap = $fk->getLocalForeignMapping();
       $leftKeys = array();
       $rightKeys = array();
-      foreach ($fk->getLocalColumns() as $columnName ) {
-        array_push($leftKeys,  constant($this->getColumnConstant($table->getColumn($columnName))) );
-        array_push($rightKeys, constant($joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn( $lfMap[$columnName]))) );
+      
+      foreach ($fk->getLocalColumns() as $columnName ) 
+      {
+        array_push($leftKeys,  $this->getColumnConstant($table->getColumn($columnName)) );
+        array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn( $lfMap[$columnName])) );
       }
 
       $relations[$relationName] = array(
@@ -152,8 +154,8 @@ class SfPeerBuilderDS extends SfPeerBuilder
         $leftKeys = array();
         $rightKeys = array();
         foreach ($refFK->getLocalColumns() as $foreignColumnName) {
-          array_push($leftKeys,  constant($this->getColumnConstant($table->getColumn( $lfMap[$foreignColumnName]))) );
-          array_push($rightKeys, constant($joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn($foreignColumnName))) );
+          array_push($leftKeys,  $this->getColumnConstant($table->getColumn( $lfMap[$foreignColumnName])) );
+          array_push($rightKeys, $joinedTablePeerBuilder->getColumnConstant($joinTable->getColumn($foreignColumnName)) );
         }
 
         $relations[$relationName] = array(
@@ -169,6 +171,12 @@ class SfPeerBuilderDS extends SfPeerBuilder
 
     $relations = var_export($relations, true);
 
+    // remove ' around constants
+    $relations = preg_replace('/\'(\w*::\w*)\'/',
+                              '\1',  
+                              $relations
+                             );
+    
     $script .= <<<EOF
 
 
