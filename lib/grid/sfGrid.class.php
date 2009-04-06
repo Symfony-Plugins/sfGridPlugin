@@ -544,7 +544,7 @@ class sfGrid implements Countable
    * <code>
    * $grid->setWidgets(array(
    *   'id'         => new sfWidgetText(),
-   *   'created_at' => new sfWidgetDate(),
+   *   'created_at' => new sfWidgetDateTime(),
    * ));
    * </code>
    *

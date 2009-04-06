@@ -36,12 +36,19 @@ class baseDSImapAttachement
    */
   protected $size = 0;
   
-  public function __construct($filename, $mimeType, $data, $size)
+  public function __construct($filename, $mimeType, $data, $size = 0)
   {
     $this->filename = $filename;
     $this->mimeType = $mimeType;
     $this->data     = $data;
-    $this->size     = $size;
+    if ($size)
+    {
+      $this->size   = $size;
+    }
+    else
+    {
+      $this->size = strlen($this->data);
+    }
   }
   
   public function getFilename()
