@@ -286,7 +286,7 @@ class sfDataSourceImap extends sfDataSource
         // regular search
         if (!is_array($filterCriteria))
         {
-          $msgNrs = imap_sort($this->stream, $sortMapping[$sortColumn], $reverse, SE_UID, $filterCriterion);
+          $msgNrs = imap_sort($this->stream, $sortMapping[$sortColumn], $reverse, SE_UID, $filterCriteria);
         }
         // support for OR in search
         else
