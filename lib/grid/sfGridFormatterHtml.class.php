@@ -186,7 +186,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   {
     $html = "<tbody>\n";
 
-    if (count($this) == 0)
+    if (count($this) != 0)
     {
       foreach ($this as $row)
       {
