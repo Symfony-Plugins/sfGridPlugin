@@ -3,41 +3,79 @@
 /*
  * This file is part of the symfony package.
  * (c) Bernhard Schussek <bschussek@gmail.com>
+ * Leon van der Ree <leon@fun4me.demon.nl>
  *
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
 
+/**
+ * A formatter that renders the HTML of a row
+ *
+ */
 class sfGridFormatterHtmlRow implements ArrayAccess
 {
+  const NO_RESULTS_MESSAGE = 'no results';
+  
   protected
-    $grid     = null,
-    $index    = null;
+    $grid             = null,
+    $index            = null,
+    $noResultsMessage;
 
   protected $highlightCondition = array();
 
-  public function __construct(sfGrid $grid, $index)
+  /**
+   * Constructs a new sfGridFormatterHtmlRow to render html-rows (tr/td's)
+   *
+   * @param sfGrid $grid  the grid that this row-formatter should render
+   * @param int $index    The index to which to set the internal row pointer
+   * @param string $noResultsMessage  The message to show when there are no results in the datasource
+   */
+  public function __construct(sfGrid $grid, $index, $noResultsMessage = self::NO_RESULTS_MESSAGE)
   {
-    $this->initialize($grid, $index);
+    $this->initialize($grid, $index, $noResultsMessage);
   }
 
-  public function initialize(sfGrid $grid, $index)
+  /**
+   * Initialises the new sfGridFormatterHtmlRow 
+   *
+   * @param sfGrid $grid  the grid that this row-formatter should render
+   * @param int $index    The index to which to set the internal row pointer
+   * @param string $noResultsMessage  The message to show when there are no results in the datasource
+   */  
+  public function initialize(sfGrid $grid, $index, $noResultsMessage = self::NO_RESULTS_MESSAGE)
   {
     $this->grid = $grid;
     $this->index = $index;
+    $this->noResultsMessage = $noResultsMessage; 
   }
 
+  /**
+   * Returns the associated grid
+   *
+   * @return sfGrid
+   */
   public function getGrid()
   {
     return $this->grid;
   }
 
+  /**
+   * Returns the internal row pointer
+   *
+   * @return int
+   */
   public function getIndex()
   {
     return $this->index;
   }
 
+  /**
+   * Renders a row to html
+   *
+   * @return string
+   */
   public function render()
   {
     $source = $this->grid->getDataSource();
@@ -79,6 +117,41 @@ class sfGridFormatterHtmlRow implements ArrayAccess
     return $data . "</tr>\n";
   }
 
+  /**
+   * renders the html when no data is in the datasource
+   *
+   * @return string
+   */
+  public function noRows()
+  {
+    $colspan = count($this->grid->getWidgets());
+    
+    $data = "<tr>\n";
+    $data .= "<td colspan=\"".$colspan."\">".$this->getNoResultsMessage()."</td>";
+    
+    return $data . "</tr>\n";
+  }
+  
+  /**
+   * Returns the description if no results are in the datasource
+   *
+   * @return string
+   */
+  public function getNoResultsMessage()
+  {
+    return $this->noResultsMessage;
+  }
+  
+  /**
+   * Sets the description when the datasource contains no results
+   *
+   * @param string $noResultsMessage
+   */
+  public function setNoResultsMessage($noResultsMessage)
+  {
+    $this->noResultsMessage = $noResultsMessage;
+  }  
+  
   /**
    * Sets the condition to add a css-class to a row
    *

@@ -210,7 +210,7 @@ class baseDSImapMessage
    * @param string $subject   the messages subject
    * @param string $from      who sent the message
    * @param string $to        recipient
-   * @param string $date      when the message was sent
+   * @param DateTime $date    when the message was sent
    * @param string $messageId Message-ID
    * @param string $reference is a reference to this message id
    * @param string $replyTo   

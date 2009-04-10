@@ -3,6 +3,7 @@
 /*
  * This file is part of the symfony package.
  * (c) Bernhard Schussek <bschussek@gmail.com>
+ * Leon van der Ree <leon@fun4me.demon.nl> 
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -23,8 +24,15 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
    */
   protected $grid = null;
 
+  /**
+   * The row formatter
+   *
+   * @var sfGridFormatterHtmlRow
+   */
   protected
-    $row        = null,
+    $row        = null;
+    
+  protected    
     $cursor     = 0,
     $uri        = null,
     $sortable   = array(),
@@ -47,7 +55,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
 
     $this->row = new sfGridFormatterHtmlRow($grid, 0);
   }
-
+  
   /**
    * Sets the css classes used for the actively sorted column
    *
@@ -64,6 +72,16 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     $this->sortClass = $sortClass;
   }
 
+  /**
+   * Sets the description when the datasource contains no results
+   *
+   * @param string $noResultsMessage
+   */
+  public function setNoResultsMessage($noResultsMessage)
+  {
+    $this->row->setNoResultsMessage($noResultsMessage);
+  }
+  
     /**
    * Sets the condition to add a css-class to a row
    *
@@ -76,6 +94,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     $this->row->setRowHighlightCondition($column, $value, $class);
   }
 
+  /**
+   * Renders the table in HTML
+   *
+   * @return string
+   */
   public function render()
   {
     return $this->renderHead().$this->renderFoot().$this->renderBody();
@@ -163,9 +186,16 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   {
     $html = "<tbody>\n";
 
-    foreach ($this as $row)
+    if (count($this) == 0)
     {
-      $html .= $row->render();
+      foreach ($this as $row)
+      {
+        $html .= $row->render();
+      }
+    } 
+    else
+    {
+      $html .= $this->row->noRows();
     }
 
     return $html . "</tbody>\n";
