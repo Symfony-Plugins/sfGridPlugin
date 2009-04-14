@@ -55,8 +55,13 @@ class sfGrid implements Countable
     $widgets      = array(),
     $formatter    = null,
     $pager        = null,
+    
     $sortColumn   = null,
     $sortOrder    = null,
+
+    $defaultSortColumn   = null,
+    $defaultSortOrder    = null,
+    
     $uri          = null,
     $uri_args     = array();
 
@@ -329,6 +334,12 @@ class sfGrid implements Countable
    */
   public function render()
   {
+    // set default sort-column, if set
+    if (!$this->getSortColumn() && $this->defaultSortColumn)
+    {
+      $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
+    }
+    
     // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
     $this->getDataSource()->setOffset(($this->getPager()->getPage()-1) * $this->getPager()->getMaxPerPage());
 
@@ -393,6 +404,22 @@ class sfGrid implements Countable
     : sfDataSourceInterface::DESC);
   }
 
+    /**
+   * Sets the column and the order by which the grid should sort by default; 
+   * if setSort has not been called. The column name must be one of the column 
+   * names of the data source. It does not necessarily has to be one 
+   * of the names given to setColumns().
+   *
+   * @param string $column The name of the column to sort by
+   * @param string $order  The order to sort in. Must be one of sfGrid::ASC,
+   *                       sfGrid::DESC, "asc" or "desc".
+   */
+  public function setDefaultSort($column, $order = sfGrid::ASC)
+  {
+    $this->defaultSortColumn = $column;
+    $this->defaultSortOrder  = $order;
+  }
+  
   /**
    * Returns the column by which the grid is sorted. If no sort column has been
    * configured, NULL is returned.
