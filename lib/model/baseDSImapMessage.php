@@ -169,8 +169,6 @@ class baseDSImapMessage
   protected $draft;
   
 
-
-
   /**
    * The structured part of the message 
    *
@@ -184,7 +182,14 @@ class baseDSImapMessage
    * @var array
    */  
   protected $attachements;
-    
+
+  /**
+   * An associative array of special headers in the message
+   *
+   * @var array
+   */
+  protected $arrHeaders;
+  
   
   //TODO:
   /**
@@ -296,7 +301,7 @@ class baseDSImapMessage
   {
     if($obj->type == self::MIME_MESSAGE_ID)
     {
-      $this->addPartToArray($obj->parts[0], $partno . ".", & $part_array);
+      $this->addPartToArray($obj->parts[0], $partno . ".", $part_array);
     } 
     else
     {
@@ -722,6 +727,46 @@ class baseDSImapMessage
   {
     return $this->draft;
   }
+  
+  /**
+   * Get special header property. They should start with X-.
+   *
+   * @param string $strName
+   * @return string
+   */
+  public function getProperty($strName)
+  {
+    if (!isset($this->arrHeaders))
+    {
+      $arrHeader = imap_fetchheader($this->stream, 
+                                    $this->getUid(), 
+                                    FT_UID);
+      
+      // browse array for additional headers
+      if (is_array($arrHeader) && count($arrHeader))
+      {
+        $this->arrHeader = array();
+        foreach($arrHeader as $strLine) 
+        {
+          // is line with additional header?
+          if (eregi("^X-", $strLine)) {
+            // separate name and value
+            eregi("^([^:]*): (.*)", $line, $arg);
+            $this->arrHeaders[$arg[1]] = $arg[2];
+          }
+        }
+      }
+    }
+    
+    $strReturn = false;
+    
+    if (isset($this->arrHeaders[$strName]))
+    {
+      $strReturn = $this->arrHeaders[$strName];
+    }
+    
+    return $strReturn; 
+  }  
   
 }
 ?>
