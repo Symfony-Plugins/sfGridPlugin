@@ -183,12 +183,13 @@ class baseDSImapMessage
    */  
   protected $attachements;
 
-  /**
-   * An associative array of special headers in the message
-   *
-   * @var array
-   */
-  protected $arrHeaders;
+//  not ready for production use yet
+//  /**
+//   * An associative array of special headers in the message
+//   *
+//   * @var array
+//   */
+//  protected $arrHeaders;
   
   
   //TODO:
@@ -728,45 +729,46 @@ class baseDSImapMessage
     return $this->draft;
   }
   
-  /**
-   * Get special header property. They should start with X-.
-   *
-   * @param string $strName
-   * @return string
-   */
-  public function getProperty($strName)
-  {
-    if (!isset($this->arrHeaders))
-    {
-      $arrHeader = imap_fetchheader($this->stream, 
-                                    $this->getUid(), 
-                                    FT_UID);
-      
-      // browse array for additional headers
-      if (is_array($arrHeader) && count($arrHeader))
-      {
-        $this->arrHeader = array();
-        foreach($arrHeader as $strLine) 
-        {
-          // is line with additional header?
-          if (eregi("^X-", $strLine)) {
-            // separate name and value
-            eregi("^([^:]*): (.*)", $line, $arg);
-            $this->arrHeaders[$arg[1]] = $arg[2];
-          }
-        }
-      }
-    }
-    
-    $strReturn = false;
-    
-    if (isset($this->arrHeaders[$strName]))
-    {
-      $strReturn = $this->arrHeaders[$strName];
-    }
-    
-    return $strReturn; 
-  }  
+//  not ready for production use yet
+//    /**
+//   * Get special header property. They should start with X-.
+//   *
+//   * @param string $strName
+//   * @return string
+//   */
+//  public function getProperty($strName)
+//  {
+//    if (!isset($this->arrHeaders))
+//    {
+//      $arrHeader = imap_fetchheader($this->stream,
+//                                    $this->getUid(),
+//                                    FT_UID);
+//      
+//      // browse array for additional headers
+//      if (is_array($arrHeader) && count($arrHeader))
+//      {
+//        $this->arrHeader = array();
+//        foreach($arrHeader as $strLine) 
+//        {
+//          // is line with additional header?
+//          if (eregi("^X-", $strLine)) {
+//            // separate name and value
+//            eregi("^([^:]*): (.*)", $line, $arg);
+//            $this->arrHeaders[$arg[1]] = $arg[2];
+//          }
+//        }
+//      }
+//    }
+//    
+//    $strReturn = false;
+//    
+//    if (isset($this->arrHeaders[$strName]))
+//    {
+//      $strReturn = $this->arrHeaders[$strName];
+//    }
+//    
+//    return $strReturn; 
+//  }
   
 }
 ?>
