@@ -78,6 +78,8 @@
  */
 class sfDataSourcePager implements Iterator
 {
+  const DEFAULT_MAX_ITEMS_PER_PAGE = 10;
+  
   protected
     $source      = null,
     $maxPerPage  = 0,
@@ -99,7 +101,7 @@ class sfDataSourcePager implements Iterator
    *
    * @see setMaxPerPage()
    */
-  public function __construct(sfDataSourceInterface $source, $maxPerPage = 10)
+  public function __construct(sfDataSourceInterface $source, $maxPerPage = self::DEFAULT_MAX_ITEMS_PER_PAGE)
   {
     $this->source = clone $source;
 
