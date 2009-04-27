@@ -468,7 +468,7 @@ class baseDSImapMessage
               if(!empty($par->value))
               {
                 $filename = $par->value;
-                var_dump($par);
+//                var_dump($par);
                 $size = ceil(($par->bytes/1024));
                 break;
               }
