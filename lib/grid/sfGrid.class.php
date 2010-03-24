@@ -47,7 +47,7 @@ class sfGrid implements Countable
 
   const ALL  = 0;
 
-  private
+  protected
     $columns      = array(),
     $columnTitles = array(),
     $columnTitlesOptions = array(),
@@ -55,13 +55,13 @@ class sfGrid implements Countable
     $widgets      = array(),
     $formatter    = null,
     $pager        = null,
-    
+
     $sortColumn   = null,
     $sortOrder    = null,
 
     $defaultSortColumn   = null,
     $defaultSortOrder    = null,
-    
+
     $uri          = null,
     $uri_args     = array();
 
@@ -125,7 +125,7 @@ class sfGrid implements Countable
       $this->setWidget($column, $this->getDefaultWidget());
     }
   }
-  
+
   /**
    * Returns the default widget
    *
@@ -241,7 +241,7 @@ class sfGrid implements Countable
   {
     if (!$this->hasColumn($column))
     {
-      throw new LogicException(sprintf('The column "%s" has not been configured. Available columns are: %s.', 
+      throw new LogicException(sprintf('The column "%s" has not been configured. Available columns are: %s.',
                                        $column,
                                        implode(', ', $this->getColumns())));
     }
@@ -339,9 +339,9 @@ class sfGrid implements Countable
     {
       $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
     }
-    
+
     // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
-    $this->getDataSource()->setOffset(($this->getPager()->getPage()-1) * $this->getPager()->getMaxPerPage());
+    $this->getDataSource()->setOffset($this->getPager()->getFirstIndex());
 
     if ($this->formatter === null)
     {
@@ -405,9 +405,9 @@ class sfGrid implements Countable
   }
 
     /**
-   * Sets the column and the order by which the grid should sort by default; 
-   * if setSort has not been called. The column name must be one of the column 
-   * names of the data source. It does not necessarily has to be one 
+   * Sets the column and the order by which the grid should sort by default;
+   * if setSort has not been called. The column name must be one of the column
+   * names of the data source. It does not necessarily has to be one
    * of the names given to setColumns().
    *
    * @param string $column The name of the column to sort by
@@ -419,7 +419,7 @@ class sfGrid implements Countable
     $this->defaultSortColumn = $column;
     $this->defaultSortOrder  = $order;
   }
-  
+
   /**
    * Returns the column by which the grid is sorted. If no sort column has been
    * configured, NULL is returned.
@@ -472,7 +472,7 @@ class sfGrid implements Countable
     {
       list($uri, $argString) = explode('?', $uri);
       $this->uri = $uri;
-      
+
       $this->uri_args = array();
       $argParts = explode('&', $argString);
 
@@ -481,7 +481,7 @@ class sfGrid implements Countable
         list($name, $value) = explode('=', $argPart);
         $this->uri_args[$name] = $value;
       }
-        
+
     }
 
   }
@@ -499,13 +499,13 @@ class sfGrid implements Countable
   /**
    * Returns the arguments for the URI set with setUri(). If no URI has been set, an empty array is returned.
    *
-   * @return array the arguments for the URI 
+   * @return array the arguments for the URI
    */
   public function getUriArgs()
   {
     return $this->uri_args;
-  }  
-  
+  }
+
   /**
    * Sets which columns should appear as sortable when rendered. Whether
    * and how sortable columns look like is defined by the formatter.
@@ -528,7 +528,7 @@ class sfGrid implements Countable
     {
       // the developer can also pass a single column name
       if (!is_array($columns))
-      {      
+      {
         $columns = (array)$columns;
       }
 
@@ -536,7 +536,7 @@ class sfGrid implements Countable
       {
         if (!$this->hasColumn($column))
         {
-          throw new LogicException(sprintf('The column "%s" has not been configured. Configured columns: %s', 
+          throw new LogicException(sprintf('The column "%s" has not been configured. Configured columns: %s',
                                            $column,
                                            implode(', ', $this->getColumns())));
         }

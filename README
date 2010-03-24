@@ -1,109 +1,106 @@
-INTRODUCTION
-------------
+*Please NOTE: this plugin has been updated, and now depends on the sfDataSourcePlugin*
 
-This plugin contains a grid subframework that allows to read various data sources in a unified way. These data sources can be rendered in a
-customizable grid with a custom formatter. The code of this plugin will eventually become bundled with symfony 1.3.
+Introduction
+============
 
-Currently arrays, Propel and Doctrine tables can be used as data sources. XML and CSV are planned for the final version. Only a HTML formatter is
-currently supported. A raw text formatter JSON and an XML formatter are planned for the final version.
+This plugin contains a grid subframework that allows to read various data sources in a unified way. 
+These data sources will be rendered in a customizable grid with a custom formatter.
 
-THIS PLUGIN IS IN VERY EARLY ALPHA STAGES AND IS NOT RECOMMENDED FOR PRODUCTION USE.
-
-
-HOWTO
------
-
-A quick guide to show how to start using the sfGrid and sfDataSource(Propel) implementations.
-
-NOTE: be sure to have connection pooling enabled for your propel database (in your database.yml) or else you will get more results than desired with right-joins (one-to-many relations)
-
-By default sfDataSourcePropel makes use of the sfPropelPropertyPathHelper: a helper that makes joining and hydrating easier.
-In order to make use of this helper you should enable the peer and object builders provided by this plugin in the builder map.
-you should change your config/propel.ini and set
-
-propel.builder.peer.class              = plugins.sfGridPlugin.lib.builder.SfPeerBuilderDS
-propel.builder.object.class            = plugins.sfGridPlugin.lib.builder.SfObjectBuilderDS
-
-run
-symfony propel:build-model and you have extended base peer and object classes. 
+Currently a HTMLand text formatter are supported. The release of the JSON formatter is expected soon.
 
 
-There also is also a bug fix for Propel provided with this plugin, that
-makes it possible to define where columns before you have provide table-aliasses.
-To enable this patch copy two files to your propel folder:
-  cp plugins/sfGridPlugin/lib/symfonyPatch/result\ after\ patch/* lib/symfony/lib/plugins/sfPropelPlugin/lib/vendor/propel/util/.
-  
-(this was created at the time of Symfony 1.2.4) 
+Howto
+=====
 
-So far the difficult part.
+A quick guide to show how to start using the sfGrid.
 
+First install the sfDataSourcePlugin.
 
-Now you are ready to make use of the sfDataSourcePropel class. This can be provided to the sfGrid in order to render the data to the screen.
-However a slightly more specialised version of the sfGrid: the sfWebGrid will be used, that can be bond to the webRequest in order to automatically process the
-interaction in the grid (the sorting and paging).
-Before you can render your grid in a template, you first have to provide the columns from your sfDataSource to the grid. Besides you probably want to define the
-title for the columns in your grid.
+In this example I will show the usage with the help of the sfDataSourcePropel class, however sfDataSourceDoctrine and sfDataSourceArray are available as well.
+
+The DataSource can be provided to the sfGrid in order to render the data to the screen.
+
+A slightly more specialised version of the sfGrid, the sfWebGrid that can be bond to the webRequest, will be used 
+in order to automatically process the interaction with the grid (the sorting and paging).
+Before you can render your grid in a template you first have to provide the columns available from your sfDataSource to the grid. 
+Besides you probably want to define the title for the columns in your grid.
 
 For the following schema.yml:
 
-propel:
-  album:
-    id:
-    album_id:
-    map:          varchar(255)
-    title:        varchar(255)
-    description:  LONGVARCHAR
-  foto:
-    id:
-    album_id:
-    filename:     varchar(255)
-    title:        varchar(255)
-    description:  LONGVARCHAR
+    [yml]
+    propel:
+      city:
+        id:
+        name:       varchar(255)
+        country_id:
+        created_at:
+      country:
+        id:
+        name:      varchar(255)
+        created_at:
 
 
 Lets see that in action.class.php:
 
-    $source = new sfDataSourcePropel('Foto');
-
-    $this->grid = new sfWebGrid($source);
+    [php]
+    // get a dataSource
+    $dataSource = new sfDataSourcePropel('City');
+    
+    // create a grid bound to your dataSource
+    $this->grid = new sfWebGrid($dataSource);
+    // and bind in to the request to handle interaction
     $this->grid->bind($request);
-
-    $this->grid->setFormatterName('html');
-    // sorting is disabled by default
+    
+    // sorting is disabled by default, so enable it to all columns
     $this->grid->setSortable(sfGrid::ALL);
-
+    // and define the default sort-order
+    // (in this case the sfDataSourcePropel knows how to handle the relation, and will automatically perform a join!) 
+    $this->grid->setDefaultSort('Country.Name', sfGrid::ASC);
+    
+    // define the columns you want to see
     $this->grid->setColumns(array(
-      'Title',
-      'Album.Title',
+      'Country.Name',
+      'Name'
     ));
+    
+    // and overrule their titles
     $this->grid->setColumnTitles(array(
-      'Title' => 'Title',
-      'Album.Title' => 'Album',
-    ));
+      'Country.Name' => 'Country',
+      'Name'				 => 'City'
+    )); 
+    
 
 And in your template enter:
 
+    [php]
     <table>
-    <?php echo $grid ?>
+    <?php 
+      $grid = $sf_data->getRaw('grid');
+      echo $grid->__toString();
+    ?>
     </table>
 
 The definition of columns in your grid is relative to your base object in your datasource.
-If you request related columns, from for example an album, the datasourcePropel will automatically 
-do a left-join on the album column and hydrates this object as well.
-The relations are defined and in your basePeer-classes (::getRelations()) and can be modified to your needs. 
+If you request related columns, from for example a country, the datasourcePropel will automatically 
+perform a join on the album and hydrates this object as well. For Doctrine I haven't developed this yet, 
+so maybe someone can write a behavior to support this as well (I am happy to help you with developping this, although short on time...), 
+or you should setup your Doctrine-Query before providing it to the dataSource. 
 
-TODO:
-----
 
-Show how to extend DataSourcePropel per class, E.G.  DataSourcePropelFoto 
- This way you can define your own sort, filter, count, hydrate (for example use default doSelect peer-methods) methods.
+Todo:
+=====
  
 Add an example CSS
-fix a bug for relations of many-to-one relations (hydration fails since parent is not resolved)
-fix implementation of custom columns of related objects (not taken into account yet, are defined in the peer)
+show more extensive examples
 
 
-LICENSE
--------
+Note
+====
+
+The sfDataSourcePlugin is required for the sfGridPlugin.
+
+
+License
+=======
 
 see LICENSE file

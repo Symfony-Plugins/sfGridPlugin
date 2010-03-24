@@ -63,8 +63,8 @@ $t->is($f->renderColumnHead('id'), '<th class="sort_desc"><a href="http://test.c
 // Do you think this is required! (do you need the parameters), I store
 // parameters in the user-session, and don't set them in the URL
 
-//$g->setUri('http://test.com?param=value&sort=column&type=desc');
-//$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?param=value&sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
+//$g->setUri('http://test.com?sort=column&type=desc');
+//$t->is($f->renderColumnHead('id'), '<th><a href="http://test.com?sort=id&type=asc">Id</a></th>', '->renderColumnHead() returns the head of a column');
 
 
 $f = new sfGridFormatterHtml(new sfGridMock(array('name')));
@@ -119,7 +119,7 @@ catch (LogicException $e)
 }
 
 // Bernhard, again I strip the parameters with setUri
-$g->setUri('http://test.com?param=value&page=100');
+$g->setUri('http://test.com?page=100');
 $output = <<<EOF
 <div class="paging">
   1
