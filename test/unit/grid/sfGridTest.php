@@ -101,7 +101,7 @@ catch (LogicException $e)
 $t->diag('->getFormatter(), ->setFormatter()');
 $g = new sfGridTest(new sfDataSourceMock());
 $t->is($g->getFormatter(), null, '->getFormatter() returns "null" when no formatter has been associated');
-$f = new sfGridFormatterMock();
+$f = new sfGridFormatterMock($g);
 $g->setFormatter($f);
 $t->is($g->getFormatter(), $f, '->getFormatter() returns the formatter associated with the grid');
 
@@ -143,7 +143,7 @@ catch (LogicException $e)
   $t->pass('->render() throws a "LogicException" if no formatter has been set');
 }
 
-$g->setFormatter(new sfGridFormatterMock());
+$g->setFormatter(new sfGridFormatterMock($g));
 $t->is($g->render(), 'rendered', '->render() renders the grid as HTML');
 
 // Countable interface

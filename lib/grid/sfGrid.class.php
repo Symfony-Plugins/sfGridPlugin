@@ -52,10 +52,23 @@ class sfGrid implements Countable
     $columnTitles = array(),
     $columnTitlesOptions = array(),
     $sortable     = array(),
-    $widgets      = array(),
-    $formatter    = null,
-    $pager        = null,
+    $widgets      = array();
+    
+  /**
+   * formatter that returns (unobtrusive) JavaScript
+   * 
+   * @var sfGridFormatterInterface
+   */
+  protected $formatter    = null;
+  
+  /**
+   * formatter that returns (unobtrusive) JavaScript
+   * 
+   * @var sfDataSourcePager
+   */
+  protected $pager        = null;
 
+  protected 
     $sortColumn   = null,
     $sortOrder    = null,
 

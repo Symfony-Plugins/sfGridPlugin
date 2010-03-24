@@ -8,7 +8,7 @@
  * file that was distributed with this source code.
  */
 
-class sfGridFormatterTextRow implements ArrayAccess
+class sfGridFormatterTextRow extends sfGridFormatterRowInterface
 {
-  
+  // TODO: I think
 }

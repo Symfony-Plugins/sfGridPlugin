@@ -8,7 +8,7 @@
  * file that was distributed with this source code.
  */
 
-class sfGridFormatterText implements sfGridFormatterInterface
+class sfGridFormatterText extends sfGridFormatterDynamic
 {
-  
+  // TODO, I think...
 }

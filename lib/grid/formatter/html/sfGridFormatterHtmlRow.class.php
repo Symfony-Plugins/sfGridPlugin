@@ -14,14 +14,11 @@
  * A formatter that renders the HTML of a row
  *
  */
-class sfGridFormatterHtmlRow implements ArrayAccess
+class sfGridFormatterHtmlRow extends sfGridFormatterDynamicRow
 {
   const NO_RESULTS_MESSAGE = 'no results';
   
-  protected
-    $grid             = null,
-    $index            = null,
-    $noResultsMessage;
+  protected $noResultsMessage;
 
   protected $highlightCondition = array();
 
@@ -46,8 +43,8 @@ class sfGridFormatterHtmlRow implements ArrayAccess
    */  
   public function initialize(sfGrid $grid, $index, $noResultsMessage = self::NO_RESULTS_MESSAGE)
   {
-    $this->grid = $grid;
-    $this->index = $index;
+    parent::initialize($grid, $index);
+    
     $this->noResultsMessage = $noResultsMessage; 
   }
 
@@ -59,16 +56,6 @@ class sfGridFormatterHtmlRow implements ArrayAccess
   public function getGrid()
   {
     return $this->grid;
-  }
-
-  /**
-   * Returns the internal row pointer
-   *
-   * @return int
-   */
-  public function getIndex()
-  {
-    return $this->index;
   }
 
   /**
@@ -166,28 +153,5 @@ class sfGridFormatterHtmlRow implements ArrayAccess
       'value'  => $value,
       'class'  => $class,
     );
-  }
-
-  public function offsetGet($key)
-  {
-    $source = $this->grid->getDataSource();
-    $source->seek($this->index);
-
-    return $source[$key];
-  }
-
-  public function offsetSet($key, $value)
-  {
-    throw new LogicException('Modification of fields is not allowed');
-  }
-
-  public function offsetExists($key)
-  {
-    return $this->grid->hasColumn($key);
-  }
-
-  public function offsetUnset($key)
-  {
-    throw new LogicException('Modification of fields is not allowed');
   }
 }

@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-class sfGridFormatterHtml implements sfGridFormatterInterface
+class sfGridFormatterHtml extends sfGridFormatterDynamic
 {
   const FIRST = "|&laquo;";
   const PREV  = "&laquo;";
@@ -19,21 +19,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   const SORT_ASC  = 'sort_asc';
   const SORT_DESC = 'sort_desc';
 
-  /**
-   * @var sfGrid
-   */
-  protected $grid = null;
-
-  /**
-   * The row formatter
-   *
-   * @var sfGridFormatterHtmlRow
-   */
-  protected
-    $row        = null;
-    
   protected    
-    $cursor     = 0,
     $uri        = null,
     $sortable   = array(),
     $sortClass  = array(sfGrid::ASC  => self::SORT_ASC ,
@@ -48,14 +34,19 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     }
     return implode("\n", $lines);
   }
-
+  
+  /**
+   * constructor of a Grid Formatter
+   * 
+   * @param sfGrid $grid
+   */
   public function __construct(sfGrid $grid)
   {
-    $this->grid = $grid;
+    parent::__construct($grid);
 
     $this->row = new sfGridFormatterHtmlRow($grid, 0);
   }
-  
+
   /**
    * Sets the css classes used for the actively sorted column
    *
@@ -104,6 +95,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return $this->renderHead().$this->renderFoot().$this->renderBody();
   }
 
+  /**
+   * Renders the Head of the grid
+   * 
+   * @return string
+   */  
   public function renderHead()
   {
     $html = "<thead>\n<tr>\n";
@@ -116,6 +112,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return $html . "</tr>\n</thead>\n";
   }
 
+  /**
+   * renders the pager for this grid
+   * 
+   * @return string
+   */
   public function renderPager()
   {
     sfProjectConfiguration::getActive()->loadHelpers(array('Url'));
@@ -161,6 +162,11 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return $html . "</div>\n";
   }
 
+  /**
+   * Renders the Footer of the grid
+   * 
+   * @return string
+   */
   public function renderFoot()
   {
     $pager = $this->grid->getPager();
@@ -181,7 +187,12 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
 
     return $html."\n  </th>\n</tr>\n</tfoot>\n";
   }
-
+  
+  /**
+   * Renders the Body of the grid
+   * 
+   * @return string
+   */
   public function renderBody()
   {
     $html = "<tbody>\n";
@@ -202,7 +213,7 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
   }
 
   /**
-   * Enter description here...
+   * Renders the ColumnHead for the grid
    *
    * @param string $column
    * @return string html formatted string
@@ -253,56 +264,6 @@ class sfGridFormatterHtml implements sfGridFormatterInterface
     return tag('th', $arrOptions, true).$html.'</th>';
   }
 
-  public function current()
-  {
-    $this->row->initialize($this->grid, $this->cursor);
 
-    return $this->row;
-  }
-
-  public function next()
-  {
-    ++$this->cursor;
-  }
-
-  public function key()
-  {
-    return $this->cursor;
-  }
-
-  public function rewind()
-  {
-    $this->cursor = 0;
-  }
-
-  public function valid()
-  {
-    return $this->cursor < count($this);
-  }
-
-  public function count()
-  {
-    return count($this->grid);
-  }
-
-//  TODO: this can be removed?! using the url_for method from symfony...
-//  static public function makeUri($uri, array $params)
-//  {
-//    // split the uri
-//    $uri = explode('?', $uri);
-//
-//    // extract the query string
-//    $values = array();
-//    if (count($uri) > 1)
-//    {
-//      $query = explode('#', $uri[1]);
-//      parse_str($query[0], $values);
-//    }
-//    $params = array_merge($values, $params);
-//
-//    // build the new uri
-////    return $uri[0] . '?' . http_build_query($params, '', '&');
-//    return url_for($module_action . '?' . http_build_query($params, '', '&'));
-//  }
 }
 

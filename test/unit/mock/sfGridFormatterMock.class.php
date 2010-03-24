@@ -10,19 +10,20 @@
 
 class sfGridFormatterMock implements sfGridFormatterInterface
 {
+  /**
+   * constructor of a Grid Formatter
+   * 
+   * @param sfGrid $grid
+   */
+  public function __construct(sfGrid $grid)
+  {
+  }
+
+  /**
+   * Renders a default text
+   */
   public function render()
   {
     return 'rendered';
   }
-  
-  public function renderHead() {}
-  public function renderFoot() {}
-  public function renderBody() {}
-  public function renderColumnHead($column) {}
-  public function current() {}
-  public function next() {}
-  public function rewind() {}
-  public function key() {}
-  public function valid() {}
-  public function count() {}
 }
