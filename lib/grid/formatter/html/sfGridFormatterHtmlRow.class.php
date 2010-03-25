@@ -49,16 +49,6 @@ class sfGridFormatterHtmlRow extends sfGridFormatterDynamicRow
   }
 
   /**
-   * Returns the associated grid
-   *
-   * @return sfGrid
-   */
-  public function getGrid()
-  {
-    return $this->grid;
-  }
-
-  /**
    * Renders a row to html
    *
    * @return string

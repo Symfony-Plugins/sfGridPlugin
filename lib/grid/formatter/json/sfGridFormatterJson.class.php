@@ -17,9 +17,7 @@ class sfGridFormatterJson extends sfGridFormatterDynamic
    */
   public function __construct(sfGrid $grid)
   {
-    parent::__construct($grid);
-
-    $this->row = new sfGridFormatterJsonRow($grid, 0);
+    parent::__construct($grid, new sfGridFormatterJsonRow($grid, 0));
   }
   
   /**

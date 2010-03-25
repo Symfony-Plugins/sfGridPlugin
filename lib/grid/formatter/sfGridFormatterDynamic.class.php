@@ -41,12 +41,12 @@ abstract class sfGridFormatterDynamic implements sfGridFormatterInterface, Itera
    * constructor of a Grid Formatter
    * 
    * @param sfGrid $grid
+   * @param sfGridFormatterRowInterface $rowFormatter
    */
-  public function __construct(sfGrid $grid)
+  public function __construct(sfGrid $grid, sfGridFormatterRowInterface $rowFormatter)
   {
     $this->grid = $grid;
-
-//    $this->row = new sfGridFormatter * Row($grid, 0);
+    $this->row = $rowFormatter;
   }
     
 

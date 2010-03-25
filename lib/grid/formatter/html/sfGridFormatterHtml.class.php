@@ -42,9 +42,7 @@ class sfGridFormatterHtml extends sfGridFormatterDynamic
    */
   public function __construct(sfGrid $grid)
   {
-    parent::__construct($grid);
-
-    $this->row = new sfGridFormatterHtmlRow($grid, 0);
+    parent::__construct($grid, new sfGridFormatterHtmlRow($grid, 0));
   }
 
   /**
@@ -92,7 +90,10 @@ class sfGridFormatterHtml extends sfGridFormatterDynamic
    */
   public function render()
   {
-    return $this->renderHead().$this->renderFoot().$this->renderBody();
+    return 
+      $this->renderHead().
+      $this->renderFoot().
+      $this->renderBody();
   }
 
   /**

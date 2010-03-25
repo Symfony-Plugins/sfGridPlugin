@@ -12,13 +12,12 @@ require_once(dirname(__FILE__).'/../../bootstrap/unit.php');
 require_once(dirname(__FILE__).'/../mock/sfGridMock.class.php');
 require_once(dirname(__FILE__).'/../mock/sfWidgetMock.class.php');
 
-$t = new lime_test(11, new lime_output_color());
+$t = new lime_test(9, new lime_output_color());
 
 // ->__construct()
 $t->diag('->__construct()');
 $grid = new sfGridMock();
 $f = new sfGridFormatterHtmlRow($grid, 1);
-$t->is($f->getGrid(), $grid, '__construct() initializes the formatter');
 $t->is($f->getIndex(), 1, '__construct() initializes the formatter');
 
 // We don't throw out of bound exceptions anymore, we do this lazy
@@ -38,7 +37,6 @@ $f = new sfGridFormatterHtmlRow(new sfGridMock(), 0);
 
 $grid = new sfGridMock();
 $f->initialize($grid, 1);
-$t->is($f->getGrid(), $grid, 'initialize() initializes the formatter');
 $t->is($f->getIndex(), 1, 'initialize() initializes the formatter');
 
 // We don't throw out of bound exceptions anymore, we do this lazy

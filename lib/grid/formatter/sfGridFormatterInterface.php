@@ -19,13 +19,6 @@
 interface sfGridFormatterInterface
 {
   /**
-   * constructor of a Grid Formatter
-   * 
-   * @param sfGrid $grid
-   */
-  public function __construct(sfGrid $grid);
-  
-  /**
    * Renders the grid
    * 
    * @return string

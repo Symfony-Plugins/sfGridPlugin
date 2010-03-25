@@ -16,16 +16,6 @@ class sfGridFormatterJsonRow extends sfGridFormatterDynamicRow
 {
 
   /**
-   * Returns the associated grid
-   *
-   * @return sfGrid
-   */
-  public function getGrid()
-  {
-    return $this->grid;
-  }
-
-  /**
    * Renders a row to an array
    *
    * @return string
