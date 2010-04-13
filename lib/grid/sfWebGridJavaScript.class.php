@@ -67,6 +67,26 @@ abstract class sfWebGridJavaScript extends sfWebGrid
     $this->dataFormatter = $formatter;
   }
   
+    public function renderData()
+  {
+    // set default sort-column, if set
+    if (!$this->getSortColumn() && $this->defaultSortColumn)
+    {
+      $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
+    }
+
+    // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
+    $this->getDataSource()->setOffset($this->getPager()->getFirstIndex());
+
+    if ($this->getDataFormatter() === null)
+    {
+      throw new LogicException('A Data formatter must be set before calling renderData()');
+    }
+
+    return $this->getDataFormatter()->render();
+  }
+  
+  
   /**
    * returns the JavaScriptFormatter (to format (the structure) in (unobstrusive) JavaScript)
    * 
@@ -89,30 +109,8 @@ abstract class sfWebGridJavaScript extends sfWebGrid
   
   
   /**
-   * Re
+   * Renders static JavaScript (not based on rows)
    * 
-   * return string
-   */
-  public function renderData()
-  {
-    // set default sort-column, if set
-    if (!$this->getSortColumn() && $this->defaultSortColumn)
-    {
-      $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
-    }
-
-    // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
-    $this->getDataSource()->setOffset($this->getPager()->getFirstIndex());
-
-    if ($this->getDataFormatter() === null)
-    {
-      throw new LogicException('A Data formatter must be set before calling renderData()');
-    }
-
-    return $this->getDataFormatter()->render();
-  }
-  
-  /**
    * return string
    */
   public function renderJavaScript()

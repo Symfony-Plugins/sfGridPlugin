@@ -68,6 +68,13 @@ class sfGrid implements Countable
    */
   protected $pager        = null;
 
+  /**
+   * the title of the grid
+   * 
+   * @var string
+   */
+  protected $title;
+  
   protected 
     $sortColumn   = null,
     $sortOrder    = null,
@@ -352,6 +359,7 @@ class sfGrid implements Countable
     {
       $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
     }
+    $this->doSort();
 
     // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
     $this->getDataSource()->setOffset($this->getPager()->getFirstIndex());
@@ -383,6 +391,17 @@ class sfGrid implements Countable
   {
     return $this->getDataSource()->count();
   }
+  
+    
+  /**
+   * proxy to the setPage method of the pager
+   * 
+   * @see sfDataSourcePager::setPage
+   */
+  public function setPage($page)
+  {
+    $this->getPager()->setPage($page);
+  }
 
   /**
    * Sets the column and the order by which the grid should be sorted. The
@@ -393,9 +412,16 @@ class sfGrid implements Countable
    * @param string $order  The order to sort in. Must be one of sfGrid::ASC,
    *                       sfGrid::DESC, "asc" or "desc".
    */
-  public function setSort($column, $order = sfGrid::ASC)
+  public function setSort($column, $order = null)
   {
-    if ($order !== sfGrid::ASC && $order !== sfGrid::DESC)
+    // case insensitive
+    $order = strtolower($order);
+    
+    if ($order == null)
+    {
+      $order = sfGrid::ASC;
+    }
+    elseif ($order !== sfGrid::ASC && $order !== sfGrid::DESC)
     {
       throw new DomainException(sprintf('The value "%s" is no valid sort order. Should be sfGrid::ASC or sfGrid::DESC', $order));
     }
@@ -410,11 +436,15 @@ class sfGrid implements Countable
     }
 
     $this->sortColumn = $column;
-    $this->sortOrder = $order;
+    $this->sortOrder = ($order == sfGrid::ASC ? sfDataSourceInterface::ASC : sfDataSourceInterface::DESC);
+  }
 
-    $this->getDataSource()->setSort($column, $order == sfGrid::ASC
-    ? sfDataSourceInterface::ASC
-    : sfDataSourceInterface::DESC);
+  protected function doSort()
+  {
+    if ($this->sortColumn)
+    {
+      $this->getDataSource()->setSort($this->sortColumn, $this->sortOrder);
+    }
   }
 
     /**
@@ -656,6 +686,22 @@ class sfGrid implements Countable
     }
 
     return $this->widgets[$column];
+  }
+
+  /**
+   * @param string $title
+   */
+  public function setTitle($title)
+  {
+   $this->title = $title; 
+  }
+    
+  /**
+   * @return string the title above this grid
+   */
+  public function getTitle()
+  {
+    return $this->title;
   }
 
 }
