@@ -16,7 +16,7 @@
  * To dynamically load new content a dataFormatter can be defined to output JSON or XML-data.  
  * 
  */
-abstract class sfWebGridJavaScript extends sfWebGrid
+abstract class sfContextGridJavaScript extends sfContextGrid
 {
   /**
    * formatter to output data (json/xml)

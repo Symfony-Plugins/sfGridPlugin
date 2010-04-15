@@ -1,5 +1,4 @@
 <?php
-
 /**
  * sfGridRoute represents a route that is bound to a Grid-class.
  *
@@ -15,7 +14,7 @@ class sfGridRoute extends sfObjectRoute
   public function __construct($pattern, array $defaults = array(), array $requirements = array(), array $options = array())
   {
     $options['type'] = 'object';
-
+    
     parent::__construct($pattern, $defaults, $requirements, $options);
   }
   
