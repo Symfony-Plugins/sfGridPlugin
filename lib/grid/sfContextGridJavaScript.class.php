@@ -74,6 +74,7 @@ abstract class sfContextGridJavaScript extends sfContextGrid
     {
       $this->setSort($this->defaultSortColumn, $this->defaultSortOrder);
     }
+    $this->doSort();
 
     // update offset lazy, now is a good time to request last page and check if we don't requested a higher pager
     $this->getDataSource()->setOffset($this->getPager()->getFirstIndex());

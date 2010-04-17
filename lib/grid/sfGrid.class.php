@@ -434,7 +434,7 @@ class sfGrid implements Countable
     {
       throw new LogicException('Unable to sort on column: "'.$column.'"');
     }
-
+    
     $this->sortColumn = $column;
     $this->sortOrder = ($order == sfGrid::ASC ? sfDataSourceInterface::ASC : sfDataSourceInterface::DESC);
   }
