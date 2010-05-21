@@ -14,9 +14,9 @@ require_once(dirname(__FILE__).'/../mock/sfDataSourceMock.class.php');
 
 class sfGridTest extends sfGrid
 {
-  public 
+  public
     $configured = false;
-    
+
   public function configure()
   {
     $this->configured = true;
@@ -26,12 +26,12 @@ class sfGridTest extends sfGrid
 
 class sfGridFormatterInvalid {}
 
-class sfWidgetMock extends sfWidget 
+class sfWidgetMock extends sfWidgetGrid
 {
   public function render($name, $value = null, $attributes = array(), $errors = array()) {}
 }
 
-class sfWidgetMock2 extends sfWidget 
+class sfWidgetMock2 extends sfWidgetGrid
 {
   public function render($name, $value = null, $attributes = array(), $errors = array()) {}
 }
@@ -206,7 +206,7 @@ $g = new sfGrid(new sfDataSourceMock());
 $g->setUri('http://mydomain.com');
 $t->is($g->getUri(), 'http://mydomain.com', '->setUri() sets the URI used by formatters');
 $g->setUri('http://mydomain.com?param=value');
-// Bernhard, just like mentioned in sfGridFormatterHtmlTest I changed this, so no more parameters (these can be stored in the user session)... 
+// Bernhard, just like mentioned in sfGridFormatterHtmlTest I changed this, so no more parameters (these can be stored in the user session)...
 $t->is($g->getUri(), 'http://mydomain.com', '->setUri() sets the URI used by formatters');
 //try
 //{
@@ -288,8 +288,8 @@ catch (LogicException $e)
 }
 
 $g = new sfGridTest(new sfDataSourceMock());
-$t->is(array_keys($g->getWidgets()), $g->getColumns(), 'sfWidgetText', '->getWidgets() returns sfWidgetText instances for every column by default');
+$t->is(array_keys($g->getWidgets()), $g->getColumns(), 'sfWidgetGrid', '->getWidgets() returns sfWidgetText instances for every column by default');
 foreach ($g->getWidgets() as $widget)
 {
-  $t->isa_ok($widget, 'sfWidgetText', '->getWidgets() returns sfWidgetText instances for every column by default');
+  $t->isa_ok($widget, 'sfWidgetGrid', '->getWidgets() returns sfWidgetText instances for every column by default');
 }

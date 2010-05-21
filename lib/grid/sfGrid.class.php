@@ -53,29 +53,29 @@ class sfGrid implements Countable
     $columnTitlesOptions = array(),
     $sortable     = array(),
     $widgets      = array();
-    
+
   /**
    * formatter that returns (unobtrusive) JavaScript
-   * 
+   *
    * @var sfGridFormatterInterface
    */
   protected $formatter    = null;
-  
+
   /**
    * formatter that returns (unobtrusive) JavaScript
-   * 
+   *
    * @var sfDataSourcePager
    */
   protected $pager        = null;
 
   /**
    * the title of the grid
-   * 
+   *
    * @var string
    */
   protected $title;
-  
-  protected 
+
+  protected
     $sortColumn   = null,
     $sortOrder    = null,
 
@@ -153,7 +153,7 @@ class sfGrid implements Countable
    */
   protected function getDefaultWidget()
   {
-    return new sfWidgetText();
+    return new sfWidgetGrid();
   }
 
   /**
@@ -391,11 +391,11 @@ class sfGrid implements Countable
   {
     return $this->getDataSource()->count();
   }
-  
-    
+
+
   /**
    * proxy to the setPage method of the pager
-   * 
+   *
    * @see sfDataSourcePager::setPage
    */
   public function setPage($page)
@@ -416,7 +416,7 @@ class sfGrid implements Countable
   {
     // case insensitive
     $order = strtolower($order);
-    
+
     if ($order == null)
     {
       $order = sfGrid::ASC;
@@ -434,7 +434,7 @@ class sfGrid implements Countable
     {
       throw new LogicException('Unable to sort on column: "'.$column.'"');
     }
-    
+
     $this->sortColumn = $column;
     $this->sortOrder = ($order == sfGrid::ASC ? sfDataSourceInterface::ASC : sfDataSourceInterface::DESC);
   }
@@ -693,9 +693,9 @@ class sfGrid implements Countable
    */
   public function setTitle($title)
   {
-   $this->title = $title; 
+   $this->title = $title;
   }
-    
+
   /**
    * @return string the title above this grid
    */

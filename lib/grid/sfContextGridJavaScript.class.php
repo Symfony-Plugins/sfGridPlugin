@@ -11,27 +11,27 @@
 /**
  * This abstract class is there as a base for your JavaScript-Grid class.
  * You should define the JavaScript formatter in the specialised class
- * 
+ *
  * All JavaScript Grids "should" still render to HTML, while unobtrusive JavaScript should progressive enhance the intactivity of your grid,
- * To dynamically load new content a dataFormatter can be defined to output JSON or XML-data.  
- * 
+ * To dynamically load new content a dataFormatter can be defined to output JSON or XML-data.
+ *
  */
 abstract class sfContextGridJavaScript extends sfContextGrid
 {
   /**
    * formatter to output data (json/xml)
-   * 
+   *
    * @var sfGridFormatterInterface
    */
   protected $dataFormatter;
 
   /**
    * formatter that returns (unobtrusive) JavaScript
-   * 
+   *
    * @var sfGridFormatterInterface
    */
   protected $javaScriptFormatter;
-  
+
   /**
    * This method should be implemented in your specialised GridClass, to define
    * the dataFormatter and javaScriptFormatter
@@ -40,16 +40,16 @@ abstract class sfContextGridJavaScript extends sfContextGrid
   {
     //set html formatter
     parent::configure();
-    
+
     // define the data formatter
     $this->setDataFormatter(new sfGridFormatterJson($this));
-    
+
     // $this->setJavaScriptFormatter(new sfGridFormatterYOUR_JS_FORMATTER($this));
   }
-  
+
   /**
-   * returns the DataFormatter (to format data in json/xml) 
-   * 
+   * returns the DataFormatter (to format data in json/xml)
+   *
    * @return sfGridFormatterInterface
    */
   public function getDataFormatter()
@@ -66,8 +66,8 @@ abstract class sfContextGridJavaScript extends sfContextGrid
   {
     $this->dataFormatter = $formatter;
   }
-  
-    public function renderData()
+
+  public function renderData()
   {
     // set default sort-column, if set
     if (!$this->getSortColumn() && $this->defaultSortColumn)
@@ -86,11 +86,11 @@ abstract class sfContextGridJavaScript extends sfContextGrid
 
     return $this->getDataFormatter()->render();
   }
-  
-  
+
+
   /**
    * returns the JavaScriptFormatter (to format (the structure) in (unobstrusive) JavaScript)
-   * 
+   *
    * @return sfGridFormatterInterface
    */
   public function getJavaScriptFormatter()
@@ -107,11 +107,11 @@ abstract class sfContextGridJavaScript extends sfContextGrid
   {
     $this->javaScriptFormatter = $formatter;
   }
-  
-  
+
+
   /**
    * Renders static JavaScript (not based on rows)
-   * 
+   *
    * return string
    */
   public function renderJavaScript()
@@ -122,5 +122,25 @@ abstract class sfContextGridJavaScript extends sfContextGrid
     }
 
     return $this->getJavaScriptFormatter()->render();
+  }
+
+  /**
+   * Gets the JavaScript paths associated with the widget.
+   *
+   * @return array An array of JavaScript paths
+   */
+  public function getJavascripts()
+  {
+    return array();
+  }
+
+  /**
+   * Gets the stylesheet paths associated with the widget.
+   *
+   * @return array An array of stylesheet paths
+   */
+  public function getStylesheets()
+  {
+    return array();
   }
 }

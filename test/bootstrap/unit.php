@@ -18,7 +18,7 @@ if (!isset($_SERVER['SYMFONY']))
 {
   //throw new RuntimeException('Could not find symfony core libraries.');
 //  $_SERVER['SYMFONY'] = $_test_dir.'/../../../lib/symfony';
-  $_SERVER['SYMFONY'] = $plugin_dir.'/../../../../sf1.4';  
+  $_SERVER['SYMFONY'] = $plugin_dir.'/../../../lib/vendor/symfony';
 }
 
 // register symfony files
@@ -49,17 +49,17 @@ class Configuration extends sfApplicationConfiguration
 }
 
 class TestContext extends sfContext
-{ 
+{
   public function loadFactories()
   {
     $this->factories['controller'] = new sfFrontWebController($this);
   }
-  
+
   public function shutdown()
   {
-    
+
   }
-  
+
 }
 
 $configuration = new Configuration('unitTest', true);

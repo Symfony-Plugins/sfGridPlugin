@@ -6,7 +6,7 @@ Introduction
 This plugin contains a grid subframework that allows to read various data sources in a unified way. 
 These data sources will be rendered in a customizable grid with a custom formatter.
 
-Currently a HTMLand text formatter are supported. The release of the JSON formatter is expected soon.
+Currently a HTML and text formatter are supported. The release of the JSON formatter is expected soon.
 
 
 Howto

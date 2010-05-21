@@ -8,7 +8,7 @@
  * file that was distributed with this source code.
  */
 
-class sfWidgetMock extends sfWidget
+class sfWidgetMock extends sfWidgetGrid
 {
   public function render($name, $value = null, $attributes = array(), $errors = array())
   {
